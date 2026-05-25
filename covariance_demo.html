@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D-Var Covariance Demo — SABER Lecture</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 5px;
+  color: #4fc3f7;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.95em;
+  color: #90a4ae;
+  margin-bottom: 15px;
+}
+.formulas {
+  max-width: 1400px;
+  margin: 0 auto 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.formula-box {
+  padding: 14px 18px;
+  background: #16213e;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+}
+.formula-box h3 {
+  font-size: 0.85em;
+  color: #4fc3f7;
+  margin-bottom: 6px;
+}
+.formula-box .math {
+  font-family: 'Times New Roman', serif;
+  font-size: 1.15em;
+  color: #fff;
+  text-align: center;
+  margin: 6px 0;
+}
+.formula-box .note {
+  font-size: 0.78em;
+  color: #90a4ae;
+  line-height: 1.5;
+}
+.formula-box .note strong {
+  color: #b0bec5;
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+}
+.controls {
+  background: #16213e;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+}
+.controls h3 {
+  color: #4fc3f7;
+  margin-bottom: 10px;
+  font-size: 1em;
+}
+.control-group {
+  margin-bottom: 14px;
+}
+.control-group label {
+  display: block;
+  font-size: 0.82em;
+  margin-bottom: 4px;
+  color: #b0bec5;
+}
+.control-group .value {
+  float: right;
+  color: #4fc3f7;
+  font-weight: bold;
+}
+.control-group input[type="range"] {
+  width: 100%;
+  margin-top: 2px;
+  accent-color: #4fc3f7;
+}
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.mode-toggle button {
+  flex: 1;
+  padding: 7px 3px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #90a4ae;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.72em;
+  transition: all 0.2s;
+}
+.mode-toggle button.active {
+  background: #0f3460;
+  color: #4fc3f7;
+  border-color: #4fc3f7;
+}
+.corr-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.corr-toggle button {
+  flex: 1;
+  padding: 6px 4px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #90a4ae;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75em;
+  transition: all 0.2s;
+}
+.corr-toggle button.active {
+  background: #0f3460;
+  color: #4fc3f7;
+  border-color: #4fc3f7;
+}
+.plots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+.plot-container {
+  background: #16213e;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+  padding: 8px;
+  min-height: 300px;
+}
+.instructions {
+  background: #0f3460;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  margin-bottom: 14px;
+  line-height: 1.5;
+  color: #b0bec5;
+}
+.instructions strong {
+  color: #4fc3f7;
+}
+.separator {
+  border: none;
+  border-top: 1px solid #0f3460;
+  margin: 12px 0;
+}
+.insight-box {
+  background: #1a1a2e;
+  border-left: 3px solid #4fc3f7;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  color: #b0bec5;
+}
+.obs-info {
+  font-size: 0.75em;
+  color: #90a4ae;
+  margin-top: 8px;
+  padding: 6px;
+  background: #1a1a2e;
+  border-radius: 4px;
+}
+.bottom-section {
+  max-width: 1400px;
+  margin: 20px auto 0;
+}
+.section-title {
+  color: #4fc3f7;
+  font-size: 1.2em;
+  margin-bottom: 4px;
+}
+.section-subtitle {
+  color: #90a4ae;
+  font-size: 0.85em;
+  margin-bottom: 12px;
+}
+.bottom-plots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.bottom-plots .plot-container {
+  min-height: 320px;
+}
+</style>
+</head>
+<body>
+
+<h1>Background Error Covariance in 3D-Var</h1>
+<p class="subtitle">Interactive demo: How B shapes the analysis increment</p>
+
+<div class="formulas">
+  <div class="formula-box">
+    <h3>Cost Function (3D-Var)</h3>
+    <div class="math">
+      J(x) = &frac12;(x - x<sup>b</sup>)<sup>T</sup> <strong style="color:#ff7043">B<sup>-1</sup></strong> (x - x<sup>b</sup>) + &frac12;(y - Hx)<sup>T</sup> <strong style="color:#66bb6a">R<sup>-1</sup></strong> (y - Hx)
+    </div>
+    <div class="note">
+      <strong style="color:#ff7043">B<sup>-1</sup></strong> penalizes departure from background &nbsp;|&nbsp;
+      <strong style="color:#66bb6a">R<sup>-1</sup></strong> penalizes departure from observations<br>
+      The analysis minimizes J &mdash; balancing trust in forecast vs. observations.
+    </div>
+  </div>
+  <div class="formula-box">
+    <h3>B Matrix Decomposition (SABER Block Chain)</h3>
+    <div class="math">
+      B = <span style="color:#ab47bc">T</span> &middot; <span style="color:#ffb74d">V</span> &middot; <span style="color:#4dd0e1">K</span> &middot; <span style="color:#aed581">&#931;</span> &middot; <span style="color:#ef5350">C</span> &middot; <span style="color:#aed581">&#931;</span><sup>T</sup> &middot; <span style="color:#4dd0e1">K</span><sup>T</sup> &middot; <span style="color:#ffb74d">V</span><sup>T</sup> &middot; <span style="color:#ab47bc">T</span><sup>T</sup>
+    </div>
+    <div class="note">
+      <strong style="color:#ef5350">C</strong> = correlation (central block: NICAS, diffusion, spectral) &nbsp;
+      <strong style="color:#aed581">&#931;</strong> = std dev &nbsp;
+      <strong style="color:#4dd0e1">K</strong> = balance<br>
+      <strong style="color:#ffb74d">V</strong> = variable change (&psi;,&chi; &rarr; u,v) &nbsp;
+      <strong style="color:#ab47bc">T</strong> = interpolation<br>
+      <em>Ensemble B: &ensp; B<sub>eff</sub> = <strong style="color:#ef5350">L</strong> &compfn; B<sub>ens</sub> &ensp; (Schur product with localization)</em>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <div class="instructions" id="instructions-text">
+      <strong>Click</strong> on the heatmaps to place observations.
+      The increment shows how information spreads from obs to the analysis.
+    </div>
+
+    <h3>Demo Mode</h3>
+    <div class="mode-toggle">
+      <button id="mode-single" class="active" onclick="setMode('single')">Single Obs</button>
+      <button id="mode-dual" onclick="setMode('dual')">Two Obs</button>
+      <button id="mode-ensemble" onclick="setMode('ensemble')">Ensemble</button>
+    </div>
+
+    <h3>Correlation Function</h3>
+    <div class="corr-toggle">
+      <button id="corr-gaussian" class="active" onclick="setCorrType('gaussian')">Gaussian</button>
+      <button id="corr-gc" onclick="setCorrType('gc')">Gaspari-Cohn</button>
+    </div>
+
+    <hr class="separator">
+    <h3>Background Error (B)</h3>
+
+    <div class="control-group">
+      <label>Horizontal Length Scale (L) <span class="value" id="val-length">3.0</span></label>
+      <input type="range" id="slider-length" min="0.5" max="8" step="0.25" value="3.0" oninput="update()">
+    </div>
+
+    <div class="control-group">
+      <label>&sigma;<sub>b</sub> (Temperature) <span class="value" id="val-sigb-t">1.0</span></label>
+      <input type="range" id="slider-sigb-t" min="0.1" max="3.0" step="0.1" value="1.0" oninput="update()">
+    </div>
+
+    <div class="control-group" id="sigbp-group">
+      <label>&sigma;<sub>b</sub> (Pressure) <span class="value" id="val-sigb-p">0.8</span></label>
+      <input type="range" id="slider-sigb-p" min="0.1" max="3.0" step="0.1" value="0.8" oninput="update()">
+    </div>
+
+    <div class="control-group" id="rho-group">
+      <label>Cross-correlation T&harr;P (&rho;) <span class="value" id="val-rho">0.5</span></label>
+      <input type="range" id="slider-rho" min="-0.9" max="0.9" step="0.05" value="0.5" oninput="update()">
+    </div>
+
+    <div class="control-group" id="ens-size-group" style="display:none;">
+      <label>Ensemble size (N<sub>ens</sub>) <span class="value" id="val-ens-size">30</span></label>
+      <input type="range" id="slider-ens-size" min="5" max="200" step="5" value="30" oninput="regenerateEnsemble()">
+    </div>
+
+    <hr class="separator">
+    <h3>Observations</h3>
+
+    <div class="control-group">
+      <label>&sigma;<sub>o</sub> (obs error) <span class="value" id="val-sigo">0.5</span></label>
+      <input type="range" id="slider-sigo" min="0.1" max="5.0" step="0.1" value="0.5" oninput="update()">
+    </div>
+
+    <div class="control-group" id="innov1-group">
+      <label>Innovation 1 (y - H(x<sup>b</sup>)) <span class="value" id="val-innov1">2.0</span></label>
+      <input type="range" id="slider-innov1" min="-3.0" max="3.0" step="0.25" value="2.0" oninput="update()">
+    </div>
+
+    <div class="control-group" id="innov2-group" style="display:none;">
+      <label>Innovation 2 <span class="value" id="val-innov2">-1.5</span></label>
+      <input type="range" id="slider-innov2" min="-3.0" max="3.0" step="0.25" value="-1.5" oninput="update()">
+    </div>
+
+    <hr class="separator">
+    <h3>Trust Ratio</h3>
+    <div class="insight-box" id="trust-display">
+      &sigma;<sub>b</sub>&sup2; / (&sigma;<sub>b</sub>&sup2; + &sigma;<sub>o</sub>&sup2;) = <strong>0.80</strong><br>
+      <em>80% of innovation goes into increment</em>
+    </div>
+
+    <div class="obs-info" id="obs-info">
+      No observations placed yet.
+    </div>
+
+    <div class="insight-box" style="margin-top: 12px;" id="mode-insight">
+      <strong>Key insight:</strong> The increment IS the correlation function, scaled by how much we trust the obs relative to the background.
+    </div>
+  </div>
+
+  <div class="plots">
+    <div class="plot-container" id="plot-panel1"></div>
+    <div class="plot-container" id="plot-panel2"></div>
+    <div class="plot-container" id="plot-panel3"></div>
+    <div class="plot-container" id="plot-panel4"></div>
+  </div>
+</div>
+
+<div class="bottom-section">
+  <h2 class="section-title">The B and R Matrices — Structure and Weights</h2>
+  <p class="section-subtitle">Left: The full B matrix for 2 variables along one grid row (T|P blocks). Right: One row of B (spatial reach) vs R (local obs constraint).</p>
+  <div class="bottom-plots">
+    <div class="plot-container" id="plot-bmatrix"></div>
+    <div class="plot-container" id="plot-weights"></div>
+  </div>
+</div>
+
+<script>
+const N = 20;
+let mode = 'single';
+let corrType = 'gaussian';
+let obs = [{x: 10, y: 10, innovation: 2.0}];
+let ensembleCorr = null; // cached synthetic ensemble correlation
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-single').className = m === 'single' ? 'active' : '';
+  document.getElementById('mode-dual').className = m === 'dual' ? 'active' : '';
+  document.getElementById('mode-ensemble').className = m === 'ensemble' ? 'active' : '';
+  document.getElementById('innov2-group').style.display = m === 'dual' ? 'block' : 'none';
+  document.getElementById('ens-size-group').style.display = m === 'ensemble' ? 'block' : 'none';
+  document.getElementById('sigbp-group').style.display = m === 'ensemble' ? 'none' : 'block';
+  document.getElementById('rho-group').style.display = m === 'ensemble' ? 'none' : 'block';
+  document.getElementById('innov1-group').style.display = m === 'ensemble' ? 'none' : 'block';
+
+  if (m === 'single') {
+    obs = [obs[0]];
+    document.getElementById('instructions-text').innerHTML =
+      '<strong>Click</strong> on the heatmaps to place an observation. The increment shows how B spreads information from the obs.';
+  } else if (m === 'dual') {
+    if (obs.length < 2) obs.push({x: 15, y: 5, innovation: parseFloat(document.getElementById('slider-innov2').value)});
+    document.getElementById('instructions-text').innerHTML =
+      '<strong>Click</strong> to reposition the 2nd observation. Watch how length scale controls whether the two obs interact or stay independent.';
+  } else {
+    if (!ensembleCorr) regenerateEnsemble();
+    document.getElementById('instructions-text').innerHTML =
+      'The <strong>ensemble</strong> provides raw (noisy) correlations. <strong>Localization</strong> (L slider) suppresses spurious long-range noise via Schur product: B<sub>eff</sub> = L ∘ B<sub>ens</sub>';
+  }
+  update();
+}
+
+function setCorrType(t) {
+  corrType = t;
+  document.getElementById('corr-gaussian').className = t === 'gaussian' ? 'active' : '';
+  document.getElementById('corr-gc').className = t === 'gc' ? 'active' : '';
+  update();
+}
+
+function gaussianCorr(d, L) {
+  return Math.exp(-0.5 * d * d / (L * L));
+}
+
+function gaspariCohn(d, c) {
+  const r = d / c;
+  if (r >= 2) return 0;
+  if (r <= 1) return 1 - (5/3)*r*r + (5/8)*r*r*r + 0.5*r*r*r*r - 0.25*r*r*r*r*r;
+  return 4 - 5*r + (5/3)*r*r + (5/8)*r*r*r - 0.5*r*r*r*r + (1/12)*r*r*r*r*r - 2/(3*r);
+}
+
+function correlation(d, L) {
+  if (corrType === 'gaussian') return gaussianCorr(d, L);
+  return gaspariCohn(d, L * 1.73);
+}
+
+function distance(x1, y1, x2, y2) {
+  return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}
+
+// Generate synthetic ensemble correlation field (noisy)
+function generateEnsembleCorrelation(nEns, trueL) {
+  // Simulate what an N-member ensemble gives you:
+  // True correlation has length scale ~trueL, but sampling noise adds spurious features
+  const cx = obs[0].x, cy = obs[0].y;
+
+  // Generate ensemble members as correlated random fields
+  // Then compute sample correlation from obs point
+  let members = [];
+  for (let m = 0; m < nEns; m++) {
+    let field = Array.from({length: N}, () => new Float64Array(N));
+    // Generate correlated noise: sum of random harmonics
+    const nModes = 8;
+    for (let k = 0; k < nModes; k++) {
+      const kx = (Math.random() - 0.5) * 2 * Math.PI / trueL;
+      const ky = (Math.random() - 0.5) * 2 * Math.PI / trueL;
+      const phase = Math.random() * 2 * Math.PI;
+      const amp = Math.random();
+      for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+          field[j][i] += amp * Math.cos(kx * i + ky * j + phase);
+        }
+      }
+    }
+    // Add uncorrelated noise
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        field[j][i] += (Math.random() - 0.5) * 0.5;
+      }
+    }
+    members.push(field);
+  }
+
+  // Compute ensemble mean
+  let mean = Array.from({length: N}, () => new Float64Array(N));
+  for (let m = 0; m < nEns; m++) {
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        mean[j][i] += members[m][j][i] / nEns;
+      }
+    }
+  }
+
+  // Compute sample correlation with obs point
+  let corrMap = Array.from({length: N}, () => new Float64Array(N));
+  let varObs = 0;
+  let varField = Array.from({length: N}, () => new Float64Array(N));
+  let cov = Array.from({length: N}, () => new Float64Array(N));
+
+  for (let m = 0; m < nEns; m++) {
+    const obsVal = members[m][cy][cx] - mean[cy][cx];
+    varObs += obsVal * obsVal;
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const fieldVal = members[m][j][i] - mean[j][i];
+        cov[j][i] += obsVal * fieldVal;
+        varField[j][i] += fieldVal * fieldVal;
+      }
+    }
+  }
+
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      const denom = Math.sqrt(varObs * varField[j][i]);
+      corrMap[j][i] = denom > 0 ? cov[j][i] / denom : 0;
+    }
+  }
+
+  return corrMap;
+}
+
+function regenerateEnsemble() {
+  const nEns = parseInt(document.getElementById('slider-ens-size').value);
+  document.getElementById('val-ens-size').textContent = nEns;
+  const trueL = 3.5; // true underlying correlation length
+  ensembleCorr = generateEnsembleCorrelation(nEns, trueL);
+  update();
+}
+
+function computeIncrements() {
+  const L = parseFloat(document.getElementById('slider-length').value);
+  const sigbT = parseFloat(document.getElementById('slider-sigb-t').value);
+  const sigbP = parseFloat(document.getElementById('slider-sigb-p').value);
+  const rho = parseFloat(document.getElementById('slider-rho').value);
+  const sigo = parseFloat(document.getElementById('slider-sigo').value);
+
+  let incT = Array.from({length: N}, () => new Float64Array(N));
+  let incP = Array.from({length: N}, () => new Float64Array(N));
+  let corrField = Array.from({length: N}, () => new Float64Array(N));
+
+  if (obs.length === 1) {
+    const o = obs[0];
+    const denom = sigbT * sigbT + sigo * sigo;
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const d = distance(i, j, o.x, o.y);
+        const c = correlation(d, L);
+        incT[j][i] = (sigbT * sigbT * c / denom) * o.innovation;
+        incP[j][i] = (rho * sigbT * sigbP * c / denom) * o.innovation;
+        corrField[j][i] = c;
+      }
+    }
+  } else {
+    const o1 = obs[0], o2 = obs[1];
+    const d12 = distance(o1.x, o1.y, o2.x, o2.y);
+    const c12 = correlation(d12, L);
+
+    const A11 = sigbT * sigbT + sigo * sigo;
+    const A12 = sigbT * sigbT * c12;
+    const A22 = sigbT * sigbT + sigo * sigo;
+    const detA = A11 * A22 - A12 * A12;
+    const invA11 = A22 / detA, invA12 = -A12 / detA;
+    const invA21 = invA12, invA22 = A11 / detA;
+    const w1 = invA11 * o1.innovation + invA12 * o2.innovation;
+    const w2 = invA21 * o1.innovation + invA22 * o2.innovation;
+
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const c1 = correlation(distance(i, j, o1.x, o1.y), L);
+        const c2 = correlation(distance(i, j, o2.x, o2.y), L);
+        incT[j][i] = sigbT * sigbT * (c1 * w1 + c2 * w2);
+        incP[j][i] = rho * sigbT * sigbP * (c1 * w1 + c2 * w2);
+        corrField[j][i] = c1;
+      }
+    }
+  }
+  return {incT, incP, corrField};
+}
+
+function update() {
+  const L = parseFloat(document.getElementById('slider-length').value);
+  const sigbT = parseFloat(document.getElementById('slider-sigb-t').value);
+  const sigbP = parseFloat(document.getElementById('slider-sigb-p').value);
+  const rho = parseFloat(document.getElementById('slider-rho').value);
+  const sigo = parseFloat(document.getElementById('slider-sigo').value);
+  const innov1 = parseFloat(document.getElementById('slider-innov1').value);
+  const innov2 = parseFloat(document.getElementById('slider-innov2').value);
+
+  obs[0].innovation = innov1;
+  if (obs.length > 1) obs[1].innovation = innov2;
+
+  document.getElementById('val-length').textContent = L.toFixed(2);
+  document.getElementById('val-sigb-t').textContent = sigbT.toFixed(1);
+  document.getElementById('val-sigb-p').textContent = sigbP.toFixed(1);
+  document.getElementById('val-rho').textContent = rho.toFixed(2);
+  document.getElementById('val-sigo').textContent = sigo.toFixed(1);
+  document.getElementById('val-innov1').textContent = innov1.toFixed(2);
+  document.getElementById('val-innov2').textContent = innov2.toFixed(2);
+
+  const trust = (sigbT*sigbT) / (sigbT*sigbT + sigo*sigo);
+  document.getElementById('trust-display').innerHTML =
+    `&sigma;<sub>b</sub>&sup2; / (&sigma;<sub>b</sub>&sup2; + &sigma;<sub>o</sub>&sup2;) = <strong>${trust.toFixed(2)}</strong><br>` +
+    `<em>${(trust*100).toFixed(0)}% of innovation goes into increment</em>`;
+
+  const plotLayout = {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 35, b: 35, l: 40, r: 20},
+    xaxis: {showgrid: false, dtick: 5, title: ''},
+    yaxis: {showgrid: false, dtick: 5, scaleanchor: 'x', title: ''},
+  };
+
+  if (mode === 'ensemble') {
+    updateEnsembleMode(L, sigbT, sigo, plotLayout);
+  } else {
+    updateParametricMode(L, sigbT, sigbP, rho, sigo, plotLayout);
+  }
+
+  updateBMatrixPlots(L, sigbT, sigbP, rho, sigo);
+}
+
+function updateParametricMode(L, sigbT, sigbP, rho, sigo, plotLayout) {
+  let obsText = obs.map((o, i) =>
+    `Obs ${i+1}: grid (${o.x}, ${o.y}), innov = ${o.innovation.toFixed(1)}`
+  ).join('<br>');
+  document.getElementById('obs-info').innerHTML = obsText;
+
+  if (mode === 'single') {
+    document.getElementById('mode-insight').innerHTML =
+      `<strong>Key insight:</strong> The increment IS the correlation function, scaled by how much we trust the observation relative to the background. ` +
+      `Cross-correlation (&rho;) is why observing one variable updates another &mdash; this is the "balance" motivation in SABER.`;
+  } else {
+    document.getElementById('mode-insight').innerHTML =
+      `<strong>Two-obs mode:</strong> With short length scales, each obs only influences its neighborhood. ` +
+      `With long length scales, the two obs interact. If they have opposite signs, they cancel at distance. ` +
+      `<em>This is why localization matters: it prevents spurious remote correlations.</em>`;
+  }
+
+  const {incT, incP, corrField} = computeIncrements();
+  const maxAbsT = Math.max(...incT.flat().map(Math.abs)) || 1;
+  const maxAbsP = Math.max(...incP.flat().map(Math.abs)) || 1;
+  const colorMax = Math.max(maxAbsT, maxAbsP);
+
+  const obsMarkers = obs.map(o => ({
+    x: [o.x], y: [o.y], mode: 'markers',
+    marker: {size: 14, color: 'white', symbol: 'x', line: {width: 2, color: 'black'}},
+    showlegend: false, hoverinfo: 'text', text: [`innov=${o.innovation.toFixed(1)}`]
+  }));
+
+  Plotly.react('plot-panel1', [
+    {z: incT, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
+     zmin: -colorMax, zmax: colorMax, colorbar: {title: 'K', len: 0.9}},
+    ...obsMarkers
+  ], {...plotLayout, title: {text: 'Temperature Increment (δT)', font: {size: 13, color: '#ff7043'}}},
+  {responsive: true});
+
+  Plotly.react('plot-panel2', [
+    {z: incP, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
+     zmin: -colorMax, zmax: colorMax, colorbar: {title: 'hPa', len: 0.9}},
+    ...obsMarkers
+  ], {...plotLayout, title: {text: 'Pressure Increment (δP) — via cross-correlation ρ', font: {size: 13, color: '#66bb6a'}}},
+  {responsive: true});
+
+  Plotly.react('plot-panel3', [
+    {z: corrField, type: 'heatmap', colorscale: 'Viridis', zmin: 0, zmax: 1,
+     colorbar: {title: 'C', len: 0.9}},
+    ...obsMarkers
+  ], {...plotLayout, title: {text: `Correlation C (${corrType === 'gaussian' ? 'Gaussian' : 'Gaspari-Cohn'}, L=${L.toFixed(1)})`, font: {size: 13, color: '#ab47bc'}}},
+  {responsive: true});
+
+  // Cross-section
+  const oRow = obs[0].y;
+  let crossT = [], crossP = [], xs = [];
+  for (let i = 0; i < N; i++) {
+    xs.push(i);
+    crossT.push(incT[oRow][i]);
+    crossP.push(incP[oRow][i]);
+  }
+
+  let crossTraces = [
+    {x: xs, y: crossT, mode: 'lines', line: {color: '#ff7043', width: 3}, name: 'δT'},
+    {x: xs, y: crossP, mode: 'lines', line: {color: '#66bb6a', width: 3, dash: 'dash'}, name: 'δP'}
+  ];
+  for (const o of obs) {
+    if (o.y === oRow) {
+      crossTraces.push({x: [o.x], y: [0], mode: 'markers',
+        marker: {size: 12, color: 'white', symbol: 'triangle-up'}, showlegend: false});
+    }
+  }
+
+  Plotly.react('plot-panel4', crossTraces, {
+    ...plotLayout,
+    title: {text: `Cross-section at y=${oRow}`, font: {size: 13, color: '#4fc3f7'}},
+    xaxis: {showgrid: true, gridcolor: '#263238', title: 'x', dtick: 5},
+    yaxis: {showgrid: true, gridcolor: '#263238', title: 'Increment'},
+    legend: {x: 0.02, y: 0.98, bgcolor: 'rgba(22,33,62,0.8)'}, showlegend: true
+  }, {responsive: true});
+}
+
+function updateEnsembleMode(L, sigbT, sigo, plotLayout) {
+  document.getElementById('obs-info').innerHTML = `Obs at (${obs[0].x}, ${obs[0].y})`;
+  document.getElementById('mode-insight').innerHTML =
+    `<strong>Ensemble B:</strong> Raw sample correlations are noisy (spurious features at distance). ` +
+    `The localization function (L slider) is applied as a Schur product to taper these artifacts. ` +
+    `<em>Larger ensemble &rarr; less noise &rarr; less aggressive localization needed.</em>`;
+
+  if (!ensembleCorr) regenerateEnsemble();
+
+  const cx = obs[0].x, cy = obs[0].y;
+
+  // Compute localization field
+  let locField = Array.from({length: N}, () => new Float64Array(N));
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      locField[j][i] = correlation(distance(i, j, cx, cy), L);
+    }
+  }
+
+  // Localized correlation = Schur product
+  let localizedCorr = Array.from({length: N}, () => new Float64Array(N));
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      localizedCorr[j][i] = ensembleCorr[j][i] * locField[j][i];
+    }
+  }
+
+  // Compute increment from localized ensemble B
+  let incEns = Array.from({length: N}, () => new Float64Array(N));
+  const denom = sigbT * sigbT * localizedCorr[cy][cx] + sigo * sigo;
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      incEns[j][i] = (sigbT * sigbT * localizedCorr[j][i] / denom) * 2.0;
+    }
+  }
+
+  const obsMarker = [{
+    x: [cx], y: [cy], mode: 'markers',
+    marker: {size: 14, color: 'white', symbol: 'x', line: {width: 2}},
+    showlegend: false
+  }];
+
+  // Panel 1: Raw ensemble correlation
+  Plotly.react('plot-panel1', [
+    {z: ensembleCorr, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
+     zmin: -1, zmax: 1, colorbar: {title: 'r', len: 0.9}},
+    ...obsMarker
+  ], {...plotLayout, title: {text: 'Raw Ensemble Correlation (noisy)', font: {size: 13, color: '#ff7043'}}},
+  {responsive: true});
+
+  // Panel 2: Localization function
+  Plotly.react('plot-panel2', [
+    {z: locField, type: 'heatmap', colorscale: 'Viridis', zmin: 0, zmax: 1,
+     colorbar: {title: 'L', len: 0.9}},
+    ...obsMarker
+  ], {...plotLayout, title: {text: `Localization Function (L=${L.toFixed(1)})`, font: {size: 13, color: '#66bb6a'}}},
+  {responsive: true});
+
+  // Panel 3: Analysis increment (responds to sigma_b, sigma_o)
+  const incMax = Math.max(...incEns.flat().map(Math.abs)) || 1;
+  Plotly.react('plot-panel3', [
+    {z: incEns, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
+     zmin: -incMax, zmax: incMax, colorbar: {title: 'δx', len: 0.9}},
+    ...obsMarker
+  ], {...plotLayout, title: {text: `Analysis Increment (σ_b=${sigbT.toFixed(1)}, σ_o=${sigo.toFixed(1)})`, font: {size: 13, color: '#ab47bc'}}},
+  {responsive: true});
+
+  // Panel 4: Cross-section comparison
+  const row = cy;
+  let rawSlice = [], locSlice = [], localizedSlice = [], incSlice = [], xs = [];
+  for (let i = 0; i < N; i++) {
+    xs.push(i);
+    rawSlice.push(ensembleCorr[row][i]);
+    locSlice.push(locField[row][i]);
+    localizedSlice.push(localizedCorr[row][i]);
+    incSlice.push(incEns[row][i]);
+  }
+
+  Plotly.react('plot-panel4', [
+    {x: xs, y: rawSlice, mode: 'lines', name: 'Raw ensemble', line: {color: '#ff7043', width: 2, dash: 'dot'}},
+    {x: xs, y: locSlice, mode: 'lines', name: 'Localization', line: {color: '#66bb6a', width: 2, dash: 'dash'}},
+    {x: xs, y: localizedSlice, mode: 'lines', name: 'Localized corr', line: {color: '#90a4ae', width: 2}},
+    {x: xs, y: incSlice, mode: 'lines', name: 'Increment', line: {color: '#ab47bc', width: 3}},
+    {x: [cx], y: [incEns[row][cx]], mode: 'markers', marker: {size: 10, color: 'white', symbol: 'diamond'}, showlegend: false}
+  ], {
+    ...plotLayout,
+    title: {text: `Cross-section at y=${row}`, font: {size: 13, color: '#4fc3f7'}},
+    xaxis: {showgrid: true, gridcolor: '#263238', title: 'x', dtick: 5},
+    yaxis: {showgrid: true, gridcolor: '#263238', title: 'Value'},
+    legend: {x: 0.02, y: 0.95, bgcolor: 'rgba(22,33,62,0.8)'}, showlegend: true
+  }, {responsive: true});
+}
+
+function updateBMatrixPlots(L, sigbT, sigbP, rho, sigo) {
+  const obsCol = obs[0].x;
+
+  // Full 2-variable B matrix (40x40) along one row
+  const N2 = N * 2;
+  let bFull = Array.from({length: N2}, () => new Float64Array(N2));
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const d = Math.abs(i - j);
+      const cval = correlation(d, L);
+      bFull[i][j] = sigbT * sigbT * cval;
+      bFull[i + N][j + N] = sigbP * sigbP * cval;
+      bFull[i][j + N] = rho * sigbT * sigbP * cval;
+      bFull[i + N][j] = rho * sigbT * sigbP * cval;
+    }
+  }
+  const bMax = Math.max(...bFull.flat().map(Math.abs)) || 1;
+
+  Plotly.react('plot-bmatrix', [
+    {z: bFull, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
+     zmin: -bMax, zmax: bMax, colorbar: {len: 0.9}}
+  ], {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 40, b: 50, l: 50, r: 20},
+    title: {text: 'B Matrix (2 variables along 1 grid row: T | P)', font: {size: 13, color: '#ff7043'}},
+    xaxis: {title: 'State index (T₁...T₂₀ | P₁...P₂₀)', showgrid: false},
+    yaxis: {title: 'State index', showgrid: false, autorange: 'reversed'},
+    shapes: [
+      {type: 'line', x0: N-0.5, x1: N-0.5, y0: -0.5, y1: N2-0.5, line: {color: '#4fc3f7', width: 1.5, dash: 'dash'}},
+      {type: 'line', x0: -0.5, x1: N2-0.5, y0: N-0.5, y1: N-0.5, line: {color: '#4fc3f7', width: 1.5, dash: 'dash'}}
+    ],
+    annotations: [
+      {x: N/2, y: -2.5, text: 'Temperature', showarrow: false, font: {color: '#ff7043', size: 11}},
+      {x: N + N/2, y: -2.5, text: 'Pressure', showarrow: false, font: {color: '#66bb6a', size: 11}},
+      {x: -4, y: N/2, text: 'T', showarrow: false, font: {color: '#ff7043', size: 12}},
+      {x: -4, y: N + N/2, text: 'P', showarrow: false, font: {color: '#66bb6a', size: 12}}
+    ]
+  }, {responsive: true});
+
+  // B vs R: one row of B and R spike
+  let bSlice = [], rSlice = [], xs = [];
+  for (let i = 0; i < N; i++) {
+    xs.push(i);
+    bSlice.push(sigbT * sigbT * correlation(Math.abs(i - obsCol), L));
+    rSlice.push(i === obsCol ? sigo * sigo : 0);
+  }
+
+  Plotly.react('plot-weights', [
+    {x: xs, y: bSlice, mode: 'lines', name: 'B row (σ²_b · C)',
+     line: {color: '#ff7043', width: 3}, fill: 'tozeroy', fillcolor: 'rgba(255,112,67,0.15)'},
+    {x: xs, y: rSlice, mode: 'lines+markers', name: 'R (σ²_o at obs)',
+     line: {color: '#66bb6a', width: 3}, marker: {size: 5}},
+    {x: [obsCol], y: [sigbT*sigbT], mode: 'markers',
+     marker: {size: 12, color: 'white', symbol: 'diamond'}, name: 'B diagonal', showlegend: true}
+  ], {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 40, b: 50, l: 50, r: 20},
+    title: {text: 'B vs R: Spatial Reach of Background vs Local Obs Constraint', font: {size: 13, color: '#4fc3f7'}},
+    xaxis: {title: 'Grid index along row', showgrid: true, gridcolor: '#263238', dtick: 5},
+    yaxis: {title: 'Covariance value', showgrid: true, gridcolor: '#263238'},
+    legend: {x: 0.55, y: 0.95, bgcolor: 'rgba(22,33,62,0.8)'}, showlegend: true
+  }, {responsive: true});
+}
+
+function handlePlotClick(data) {
+  if (!data || !data.points || data.points.length === 0) return;
+  const pt = data.points[0];
+  const gx = Math.round(pt.x), gy = Math.round(pt.y);
+  if (gx < 0 || gx >= N || gy < 0 || gy >= N) return;
+
+  if (mode === 'single' || mode === 'ensemble') {
+    obs = [{x: gx, y: gy, innovation: parseFloat(document.getElementById('slider-innov1').value)}];
+    if (mode === 'ensemble') { ensembleCorr = null; regenerateEnsemble(); return; }
+  } else {
+    const innov2 = parseFloat(document.getElementById('slider-innov2').value);
+    if (obs.length < 2) obs.push({x: gx, y: gy, innovation: innov2});
+    else obs[1] = {x: gx, y: gy, innovation: innov2};
+  }
+  update();
+}
+
+function initPlotListeners() {
+  ['plot-panel1', 'plot-panel2', 'plot-panel3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.on) el.on('plotly_click', handlePlotClick);
+  });
+}
+
+update();
+setTimeout(initPlotListeners, 500);
+</script>
+</body>
+</html>

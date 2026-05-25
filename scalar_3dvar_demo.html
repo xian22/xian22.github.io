@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scalar 3D-Var Cost Function Demo</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 5px;
+  color: #4fc3f7;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.95em;
+  color: #90a4ae;
+  margin-bottom: 15px;
+}
+.formula-bar {
+  max-width: 1200px;
+  margin: 0 auto 18px;
+  padding: 14px 24px;
+  background: #16213e;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  text-align: center;
+}
+.formula-bar .math {
+  font-family: 'Times New Roman', serif;
+  font-size: 1.25em;
+  color: #fff;
+  margin: 6px 0;
+}
+.formula-bar .note {
+  font-size: 0.82em;
+  color: #90a4ae;
+  line-height: 1.6;
+}
+.formula-bar .note strong { color: #b0bec5; }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+}
+.controls {
+  background: #16213e;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+}
+.controls h3 {
+  color: #4fc3f7;
+  margin-bottom: 10px;
+  font-size: 1em;
+}
+.control-group {
+  margin-bottom: 14px;
+}
+.control-group label {
+  display: block;
+  font-size: 0.82em;
+  margin-bottom: 4px;
+  color: #b0bec5;
+}
+.control-group .value {
+  float: right;
+  color: #4fc3f7;
+  font-weight: bold;
+}
+.control-group input[type="range"] {
+  width: 100%;
+  margin-top: 2px;
+  accent-color: #4fc3f7;
+}
+.separator {
+  border: none;
+  border-top: 1px solid #0f3460;
+  margin: 14px 0;
+}
+.insight-box {
+  background: #1a1a2e;
+  border-left: 3px solid #4fc3f7;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 0.8em;
+  line-height: 1.6;
+  color: #b0bec5;
+}
+.insight-box strong { color: #e0e0e0; }
+.insight-box .highlight { color: #4fc3f7; font-weight: bold; }
+.result-box {
+  background: #0f3460;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 0.85em;
+  line-height: 1.7;
+  color: #e0e0e0;
+}
+.result-box .label { color: #90a4ae; font-size: 0.85em; }
+.result-box .val { color: #4fc3f7; font-weight: bold; font-size: 1.1em; }
+.result-box .val-orange { color: #ff7043; font-weight: bold; font-size: 1.1em; }
+.result-box .val-green { color: #66bb6a; font-weight: bold; font-size: 1.1em; }
+.plots {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+.plot-container {
+  background: #16213e;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+  padding: 8px;
+  min-height: 300px;
+}
+.weight-bar-container {
+  margin-top: 12px;
+}
+.weight-bar-label {
+  font-size: 0.78em;
+  color: #90a4ae;
+  margin-bottom: 4px;
+}
+.weight-bar {
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+.weight-bar .forecast-side {
+  background: #ff7043;
+  transition: width 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: white;
+  min-width: 30px;
+}
+.weight-bar .obs-side {
+  background: #66bb6a;
+  transition: width 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: white;
+  min-width: 30px;
+}
+</style>
+</head>
+<body>
+
+<h1>Scalar 3D-Var: Minimizing the Cost Function</h1>
+<p class="subtitle">The simplest data assimilation problem — one variable, one observation</p>
+
+<div class="formula-bar">
+  <div class="math">
+    J(T) =
+    <span style="color:#ff7043">&alpha;</span>(T &minus; T<sup>f</sup>)&sup2;
+    + <span style="color:#66bb6a">&beta;</span>(T &minus; T<sup>o</sup>)&sup2;
+    &emsp;&emsp; where &emsp;
+    <span style="color:#ff7043">&alpha; = 1/&sigma;<sub>f</sub>&sup2;</span>
+    &emsp;
+    <span style="color:#66bb6a">&beta; = 1/&sigma;<sub>o</sub>&sup2;</span>
+  </div>
+  <div class="note">
+    <strong style="color:#ff7043">J<sub>b</sub></strong> = background (forecast) penalty &emsp;|&emsp;
+    <strong style="color:#66bb6a">J<sub>o</sub></strong> = observation penalty &emsp;|&emsp;
+    The analysis <strong>T<sup>a</sup></strong> minimizes J &mdash; a weighted compromise between forecast and observation.
+  </div>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <h3>Forecast (Background)</h3>
+    <div class="control-group">
+      <label>T<sup>f</sup> (forecast temperature) <span class="value" id="val-tf">91.0</span>&deg;</label>
+      <input type="range" id="slider-tf" min="85" max="100" step="0.5" value="91.0" oninput="update()">
+    </div>
+    <div class="control-group">
+      <label>&sigma;<sub>f</sub> (forecast std dev) <span class="value" id="val-sigf">2.0</span>&deg;</label>
+      <input type="range" id="slider-sigf" min="0.3" max="6.0" step="0.1" value="2.0" oninput="update()">
+    </div>
+
+    <hr class="separator">
+    <h3>Observation</h3>
+    <div class="control-group">
+      <label>T<sup>o</sup> (observed temperature) <span class="value" id="val-to">95.0</span>&deg;</label>
+      <input type="range" id="slider-to" min="85" max="100" step="0.5" value="95.0" oninput="update()">
+    </div>
+    <div class="control-group">
+      <label>&sigma;<sub>o</sub> (observation std dev) <span class="value" id="val-sigo">1.5</span>&deg;</label>
+      <input type="range" id="slider-sigo" min="0.3" max="6.0" step="0.1" value="1.5" oninput="update()">
+    </div>
+
+    <hr class="separator">
+    <h3>Analysis Result</h3>
+
+    <div class="result-box" id="result-box">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="weight-bar-container">
+      <div class="weight-bar-label">Trust allocation: forecast vs observation</div>
+      <div class="weight-bar">
+        <div class="forecast-side" id="bar-forecast" style="width:40%;">40%</div>
+        <div class="obs-side" id="bar-obs" style="width:60%;">60%</div>
+      </div>
+    </div>
+
+    <div class="insight-box" id="insight-box">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <div class="plots">
+    <div class="plot-container" id="plot-cost"></div>
+    <div class="plot-container" id="plot-gaussians"></div>
+  </div>
+</div>
+
+<script>
+const Tmin = 82, Tmax = 103;
+const nPts = 300;
+
+function linspace(a, b, n) {
+  const arr = [];
+  for (let i = 0; i < n; i++) arr.push(a + (b - a) * i / (n - 1));
+  return arr;
+}
+
+function gaussian(x, mu, sigma) {
+  const z = (x - mu) / sigma;
+  return Math.exp(-0.5 * z * z) / (sigma * Math.sqrt(2 * Math.PI));
+}
+
+function update() {
+  const Tf = parseFloat(document.getElementById('slider-tf').value);
+  const To = parseFloat(document.getElementById('slider-to').value);
+  const sigf = parseFloat(document.getElementById('slider-sigf').value);
+  const sigo = parseFloat(document.getElementById('slider-sigo').value);
+
+  document.getElementById('val-tf').textContent = Tf.toFixed(1);
+  document.getElementById('val-to').textContent = To.toFixed(1);
+  document.getElementById('val-sigf').textContent = sigf.toFixed(1);
+  document.getElementById('val-sigo').textContent = sigo.toFixed(1);
+
+  const alpha = 1 / (sigf * sigf);
+  const beta = 1 / (sigo * sigo);
+
+  // Analysis: T_a = (alpha*Tf + beta*To) / (alpha + beta)
+  const Ta = (alpha * Tf + beta * To) / (alpha + beta);
+
+  // Analysis variance: sigma_a^2 = 1 / (alpha + beta)
+  const sigA2 = 1 / (alpha + beta);
+  const sigA = Math.sqrt(sigA2);
+
+  // Weight on observation: W_o = alpha / (alpha + beta) = sigma_o^{-2} / (sigma_f^{-2} + sigma_o^{-2})
+  //   equivalently: W_o = sigma_f^2 / (sigma_f^2 + sigma_o^2)
+  const Wo = (sigf * sigf) / (sigf * sigf + sigo * sigo);
+  const Wf = 1 - Wo;
+
+  // Cost function values
+  const Ts = linspace(Tmin, Tmax, nPts);
+  const Jb = Ts.map(T => alpha * (T - Tf) * (T - Tf));
+  const Jo = Ts.map(T => beta * (T - To) * (T - To));
+  const Jtot = Ts.map((T, i) => Jb[i] + Jo[i]);
+
+  // Value of J at the analysis
+  const JaVal = alpha * (Ta - Tf) * (Ta - Tf) + beta * (Ta - To) * (Ta - To);
+
+  // Max J for plot range (cap it so curves stay visible)
+  const JmaxPlot = Math.min(Math.max(...Jtot.filter(v => v < 1000)), 60);
+
+  // ── Cost function plot ──
+  Plotly.react('plot-cost', [
+    {
+      x: Ts, y: Jb, mode: 'lines', name: 'J_b = α(T−T<sup>f</sup>)²',
+      line: {color: '#ff7043', width: 2, dash: 'dash'},
+      hovertemplate: 'T=%{x:.1f}°<br>J_b=%{y:.2f}<extra></extra>'
+    },
+    {
+      x: Ts, y: Jo, mode: 'lines', name: 'J_o = β(T−T<sup>o</sup>)²',
+      line: {color: '#66bb6a', width: 2, dash: 'dash'},
+      hovertemplate: 'T=%{x:.1f}°<br>J_o=%{y:.2f}<extra></extra>'
+    },
+    {
+      x: Ts, y: Jtot, mode: 'lines', name: 'J(T) = J_b + J_o',
+      line: {color: '#4fc3f7', width: 3.5},
+      hovertemplate: 'T=%{x:.1f}°<br>J=%{y:.2f}<extra></extra>'
+    },
+    // Vertical line at Tf
+    {
+      x: [Tf, Tf], y: [0, JmaxPlot], mode: 'lines', name: 'T<sup>f</sup>',
+      line: {color: '#ff7043', width: 1.5, dash: 'dot'}, showlegend: false
+    },
+    // Vertical line at To
+    {
+      x: [To, To], y: [0, JmaxPlot], mode: 'lines', name: 'T<sup>o</sup>',
+      line: {color: '#66bb6a', width: 1.5, dash: 'dot'}, showlegend: false
+    },
+    // Analysis point
+    {
+      x: [Ta], y: [JaVal], mode: 'markers', name: 'T<sup>a</sup> (analysis)',
+      marker: {size: 14, color: '#ffca28', symbol: 'star', line: {width: 1.5, color: '#fff'}},
+      hovertemplate: 'T<sup>a</sup>=%{x:.2f}°<br>J(T<sup>a</sup>)=%{y:.3f}<extra></extra>'
+    },
+    // Tf label
+    {
+      x: [Tf], y: [JmaxPlot * 0.95], mode: 'text', text: ['T<sup>f</sup>'],
+      textfont: {color: '#ff7043', size: 13}, showlegend: false
+    },
+    // To label
+    {
+      x: [To], y: [JmaxPlot * 0.95], mode: 'text', text: ['T<sup>o</sup>'],
+      textfont: {color: '#66bb6a', size: 13}, showlegend: false
+    }
+  ], {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 40, b: 45, l: 55, r: 20},
+    title: {text: 'Cost Function J(T) — find the minimum', font: {size: 14, color: '#4fc3f7'}},
+    xaxis: {
+      title: 'Temperature T (°)', showgrid: true, gridcolor: '#263238',
+      range: [Tmin, Tmax], dtick: 2, zeroline: false
+    },
+    yaxis: {
+      title: 'J(T)', showgrid: true, gridcolor: '#263238',
+      range: [0, JmaxPlot], zeroline: false
+    },
+    legend: {x: 0.01, y: 0.99, bgcolor: 'rgba(22,33,62,0.85)', font: {size: 11}},
+    showlegend: true,
+    annotations: [
+      {
+        x: Ta, y: JaVal, xref: 'x', yref: 'y',
+        text: `T<sup>a</sup> = ${Ta.toFixed(1)}°`,
+        showarrow: true, arrowhead: 2, arrowsize: 1, arrowcolor: '#ffca28',
+        ax: 0, ay: -35,
+        font: {color: '#ffca28', size: 13},
+        bgcolor: 'rgba(26,26,46,0.9)', borderpad: 4
+      }
+    ]
+  }, {responsive: true});
+
+  // ── Probability (Gaussian) plot ──
+  const pForecast = Ts.map(T => gaussian(T, Tf, sigf));
+  const pObs = Ts.map(T => gaussian(T, To, sigo));
+  const pAnalysis = Ts.map(T => gaussian(T, Ta, sigA));
+  const pMax = Math.max(...pForecast, ...pObs, ...pAnalysis) * 1.1;
+
+  Plotly.react('plot-gaussians', [
+    {
+      x: Ts, y: pForecast, mode: 'lines', name: `Forecast N(${Tf.toFixed(0)}, ${sigf.toFixed(1)}²)`,
+      line: {color: '#ff7043', width: 2.5},
+      fill: 'tozeroy', fillcolor: 'rgba(255,112,67,0.12)',
+      hovertemplate: 'T=%{x:.1f}°<br>p=%{y:.4f}<extra></extra>'
+    },
+    {
+      x: Ts, y: pObs, mode: 'lines', name: `Obs N(${To.toFixed(0)}, ${sigo.toFixed(1)}²)`,
+      line: {color: '#66bb6a', width: 2.5},
+      fill: 'tozeroy', fillcolor: 'rgba(102,187,106,0.12)',
+      hovertemplate: 'T=%{x:.1f}°<br>p=%{y:.4f}<extra></extra>'
+    },
+    {
+      x: Ts, y: pAnalysis, mode: 'lines', name: `Analysis N(${Ta.toFixed(1)}, ${sigA.toFixed(2)}²)`,
+      line: {color: '#ffca28', width: 3},
+      fill: 'tozeroy', fillcolor: 'rgba(255,202,40,0.10)',
+      hovertemplate: 'T=%{x:.1f}°<br>p=%{y:.4f}<extra></extra>'
+    },
+    // Vertical lines at means
+    {
+      x: [Tf, Tf], y: [0, pMax], mode: 'lines', showlegend: false,
+      line: {color: '#ff7043', width: 1, dash: 'dot'}
+    },
+    {
+      x: [To, To], y: [0, pMax], mode: 'lines', showlegend: false,
+      line: {color: '#66bb6a', width: 1, dash: 'dot'}
+    },
+    {
+      x: [Ta, Ta], y: [0, pMax], mode: 'lines', showlegend: false,
+      line: {color: '#ffca28', width: 1.5, dash: 'dot'}
+    }
+  ], {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 40, b: 45, l: 55, r: 20},
+    title: {text: 'Bayesian View — the analysis is the product of two Gaussians', font: {size: 14, color: '#4fc3f7'}},
+    xaxis: {
+      title: 'Temperature T (°)', showgrid: true, gridcolor: '#263238',
+      range: [Tmin, Tmax], dtick: 2, zeroline: false
+    },
+    yaxis: {
+      title: 'Probability density', showgrid: true, gridcolor: '#263238',
+      range: [0, pMax], zeroline: false
+    },
+    legend: {x: 0.01, y: 0.99, bgcolor: 'rgba(22,33,62,0.85)', font: {size: 11}},
+    showlegend: true
+  }, {responsive: true});
+
+  // ── Results panel ──
+  document.getElementById('result-box').innerHTML =
+    `<span class="label">Analysis temperature:</span><br>` +
+    `<span class="val" style="font-size:1.3em;">T<sup>a</sup> = ${Ta.toFixed(2)}&deg;</span><br>` +
+    `<span class="label">Analysis std dev:</span> <span class="val">&sigma;<sub>a</sub> = ${sigA.toFixed(2)}&deg;</span><br>` +
+    `<hr style="border-color:#1a1a2e; margin:6px 0;">` +
+    `<span class="label">Weight on forecast:</span> <span class="val-orange">${(Wf * 100).toFixed(1)}%</span><br>` +
+    `<span class="label">Weight on observation:</span> <span class="val-green">${(Wo * 100).toFixed(1)}%</span>`;
+
+  // ── Weight bar ──
+  const barF = document.getElementById('bar-forecast');
+  const barO = document.getElementById('bar-obs');
+  barF.style.width = (Wf * 100).toFixed(1) + '%';
+  barO.style.width = (Wo * 100).toFixed(1) + '%';
+  barF.textContent = `Tᶠ ${(Wf * 100).toFixed(0)}%`;
+  barO.textContent = `Tᵒ ${(Wo * 100).toFixed(0)}%`;
+
+  // ── Insight box ──
+  let insight = '';
+  if (Math.abs(Wo - Wf) < 0.05) {
+    insight = `<strong>Equal trust:</strong> &sigma;<sub>f</sub> &approx; &sigma;<sub>o</sub>, so the analysis sits roughly halfway between forecast and observation. The analysis uncertainty (&sigma;<sub>a</sub> = ${sigA.toFixed(2)}&deg;) is smaller than either input — combining information always reduces uncertainty.`;
+  } else if (Wo > Wf) {
+    insight = `<strong>Trusting the observation more</strong> because &sigma;<sub>f</sub> > &sigma;<sub>o</sub> (forecast is less certain). The analysis is pulled toward T<sup>o</sup>. Notice the analysis Gaussian is narrower than both inputs — we're more certain after assimilation.`;
+  } else {
+    insight = `<strong>Trusting the forecast more</strong> because &sigma;<sub>o</sub> > &sigma;<sub>f</sub> (observation is less certain). The analysis is pulled toward T<sup>f</sup>. The analysis still has smaller uncertainty than the forecast alone.`;
+  }
+
+  insight += `<br><br><strong>Key formula:</strong> T<sup>a</sup> = ` +
+    `<span class="highlight">&sigma;<sub>o</sub>&sup2;</span>/(&sigma;<sub>f</sub>&sup2; + &sigma;<sub>o</sub>&sup2;) &middot; T<sup>f</sup> + ` +
+    `<span class="highlight">&sigma;<sub>f</sub>&sup2;</span>/(&sigma;<sub>f</sub>&sup2; + &sigma;<sub>o</sub>&sup2;) &middot; T<sup>o</sup>`;
+
+  document.getElementById('insight-box').innerHTML = insight;
+}
+
+update();
+</script>
+</body>
+</html>

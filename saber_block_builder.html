@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SABER Block Chain Builder</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 24px;
+}
+h1 { text-align: center; color: #4fc3f7; font-size: 1.5em; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #90a4ae; font-size: 0.9em; margin-bottom: 20px; }
+
+.chain-visual {
+  max-width: 1200px;
+  margin: 0 auto 24px;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 20px;
+}
+.chain-visual h3 { color: #4fc3f7; font-size: 0.9em; margin-bottom: 12px; text-align: center; }
+.chain-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: 70px;
+}
+.chain-block {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.72em;
+  font-weight: bold;
+  text-align: center;
+  min-width: 80px;
+  max-width: 120px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  position: relative;
+}
+.chain-block:hover { transform: scale(1.05); }
+.chain-block.central { background: #ef5350; color: white; border-color: #ef5350; }
+.chain-block.outer-tl { background: #42a5f5; color: white; }
+.chain-block.outer-ad { background: #7e57c2; color: white; }
+.chain-block.empty {
+  background: transparent; border: 2px dashed #546e7a;
+  color: #546e7a; cursor: pointer; min-width: 100px;
+}
+.chain-block.empty:hover { border-color: #4fc3f7; color: #4fc3f7; }
+.chain-arrow { color: #546e7a; font-size: 1.2em; }
+.chain-block .remove-btn {
+  position: absolute; top: -6px; right: -6px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #ff5252; color: white; font-size: 10px;
+  border: none; cursor: pointer; display: none;
+  line-height: 16px; text-align: center;
+}
+.chain-block:hover .remove-btn { display: block; }
+
+.chain-legend {
+  display: flex; justify-content: center; gap: 20px;
+  margin-top: 12px; font-size: 0.75em; color: #90a4ae;
+}
+.chain-legend span { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+.builder {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+}
+
+.config-panel {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 18px;
+}
+.config-panel h3 { color: #4fc3f7; margin-bottom: 12px; font-size: 0.95em; }
+
+.step { margin-bottom: 18px; }
+.step-label {
+  font-size: 0.8em; color: #90a4ae; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.step-number {
+  background: #4fc3f7; color: #1a1a2e; width: 20px; height: 20px;
+  border-radius: 50%; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 0.75em; font-weight: bold;
+}
+
+select, button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.85em;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+select:focus, button:focus { outline: none; border-color: #4fc3f7; }
+button { background: #0f3460; transition: background 0.2s; }
+button:hover { background: #1a3a6e; }
+button.primary { background: #4fc3f7; color: #1a1a2e; font-weight: bold; }
+button.primary:hover { background: #81d4fa; }
+button.danger { background: #d32f2f; color: white; }
+button.danger:hover { background: #f44336; }
+
+.block-info {
+  background: #1a1a2e;
+  border-left: 3px solid #4fc3f7;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  color: #b0bec5;
+}
+
+.yaml-panel {
+  background: #0d1117;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 18px;
+  position: relative;
+}
+.yaml-panel h3 { color: #4fc3f7; margin-bottom: 12px; font-size: 0.95em; }
+.yaml-output {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78em;
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+  color: #c9d1d9;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.yaml-output .comment { color: #6a9955; }
+.yaml-output .key { color: #9cdcfe; }
+.yaml-output .value { color: #ce9178; }
+.yaml-output .block-name { color: #4ec9b0; }
+
+.copy-btn {
+  position: absolute; top: 12px; right: 14px;
+  width: auto; padding: 6px 14px;
+  font-size: 0.75em; background: #0f3460;
+}
+.separator { border: none; border-top: 1px solid #0f3460; margin: 14px 0; }
+
+.warnings-container {
+  max-width: 1200px;
+  margin: 0 auto 16px;
+}
+.warning-banner {
+  background: #3e2f0a;
+  border: 1px solid #f9a825;
+  border-left: 4px solid #f9a825;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82em;
+  line-height: 1.5;
+  color: #ffe082;
+  animation: warningFadeIn 0.3s ease;
+}
+@keyframes warningFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.warning-banner .warning-icon {
+  flex-shrink: 0;
+  font-size: 1.1em;
+  margin-top: 1px;
+}
+.warning-banner .warning-text strong {
+  color: #ffca28;
+}
+.warning-banner .warning-text em {
+  color: #c8a74e;
+  font-size: 0.92em;
+}
+
+.block-summary {
+  max-width: 1200px;
+  margin: 20px auto 0;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 18px 22px;
+  display: none;
+}
+.block-summary.visible { display: block; }
+.block-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.block-summary-header .block-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: white;
+}
+.block-tag.central-tag { background: #ef5350; }
+.block-tag.outer-tag { background: #42a5f5; }
+.block-tag.cov-tag { background: #66bb6a; }
+.block-summary-header h3 {
+  color: #e0e0e0;
+  font-size: 1.05em;
+  margin: 0;
+}
+.block-summary-body {
+  font-size: 0.85em;
+  line-height: 1.7;
+  color: #b0bec5;
+}
+.block-summary-body strong { color: #e0e0e0; }
+.block-summary-body .math-note {
+  display: inline-block;
+  background: #1a1a2e;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: 'Times New Roman', serif;
+  color: #fff;
+  font-size: 1.05em;
+  margin: 0 2px;
+}
+.block-summary-body .detail-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 0.92em;
+}
+.block-summary-body .detail-label {
+  color: #4fc3f7;
+  font-weight: bold;
+  text-align: right;
+}
+</style>
+</head>
+<body>
+
+<h1>SABER Block Chain Builder</h1>
+<p class="subtitle">Build a JEDI background error covariance configuration interactively</p>
+
+<div class="chain-visual">
+  <h3>Block Chain Structure: &ensp; Output &larr; [TL outer blocks] &larr; [Central] &larr; [AD outer blocks] &larr; Input</h3>
+  <div class="chain-row" id="chain-display"></div>
+  <div class="chain-legend">
+    <span><div class="legend-dot" style="background:#42a5f5"></div> Outer (Tangent Linear)</span>
+    <span><div class="legend-dot" style="background:#ef5350"></div> Central Block</span>
+    <span><div class="legend-dot" style="background:#7e57c2"></div> Outer (Adjoint)</span>
+  </div>
+</div>
+
+<div class="warnings-container" id="warnings-container"></div>
+
+<div class="builder">
+  <div class="config-panel">
+    <h3>Build Your Block Chain</h3>
+
+    <div class="step">
+      <div class="step-label"><span class="step-number">1</span> Covariance Type</div>
+      <select id="cov-type" onchange="onCovTypeChange()">
+        <option value="">-- Select covariance type --</option>
+        <option value="parametric">Parametric (Static B)</option>
+        <option value="ensemble">Ensemble B</option>
+        <option value="hybrid">Hybrid B</option>
+      </select>
+    </div>
+
+    <div class="step" id="step-central" style="display:none;">
+      <div class="step-label"><span class="step-number">2</span> Central Block</div>
+      <select id="central-block" onchange="onCentralChange()">
+        <option value="">-- Select central block --</option>
+      </select>
+      <div class="block-info" id="central-info" style="display:none;"></div>
+    </div>
+
+    <div class="step" id="step-localization" style="display:none;">
+      <div class="step-label"><span class="step-number">2b</span> Localization Central Block</div>
+      <select id="loc-central-block" onchange="onLocCentralChange()">
+        <option value="">-- Select localization block --</option>
+      </select>
+      <div class="block-info" id="loc-info" style="display:none;"></div>
+    </div>
+
+    <div class="step" id="step-outer" style="display:none;">
+      <div class="step-label"><span class="step-number">3</span> Add Outer Blocks (innermost first)</div>
+      <select id="outer-block-select">
+        <option value="">-- Select an outer block to add --</option>
+      </select>
+      <button class="primary" onclick="addOuterBlock()" style="margin-top:6px;">+ Add Outer Block</button>
+      <div class="block-info" id="outer-info" style="display:none;"></div>
+    </div>
+
+    <div class="step" id="step-loc-outer" style="display:none;">
+      <div class="step-label"><span class="step-number">3b</span> Localization Outer Blocks</div>
+      <select id="loc-outer-block-select">
+        <option value="">-- Select an outer block --</option>
+      </select>
+      <button onclick="addLocOuterBlock()" style="margin-top:6px;">+ Add Localization Outer Block</button>
+    </div>
+
+    <hr class="separator">
+    <button class="danger" onclick="resetAll()">Reset All</button>
+  </div>
+
+  <div class="yaml-panel">
+    <h3>Generated YAML Configuration</h3>
+    <button class="copy-btn" onclick="copyYaml()">Copy YAML</button>
+    <div class="yaml-output" id="yaml-output">
+      <span class="comment"># Select a covariance type to begin...</span>
+    </div>
+  </div>
+</div>
+
+<div class="block-summary" id="block-summary">
+  <div class="block-summary-header">
+    <span class="block-tag" id="summary-tag"></span>
+    <h3 id="summary-title"></h3>
+  </div>
+  <div class="block-summary-body" id="summary-body"></div>
+</div>
+
+<script>
+const blockData = {
+  central: {
+    'BUMP_NICAS': {
+      desc: 'Normalized Interpolated Convolution on Adaptive Subgrid. Best for large-scale correlations on any unstructured grid. Requires pre-computed NICAS files.',
+      yaml: (indent) => `${indent}saber block name: BUMP_NICAS\n${indent}read:\n${indent}  io:\n${indent}    data directory: <path/to/bump/data>  # directory containing BUMP files\n${indent}    files prefix: <bump_prefix>          # prefix for NICAS files\n${indent}  drivers:\n${indent}    multivariate strategy: univariate     # or 'duplicated' for same localization on all vars\n${indent}    read local nicas: true                # true if using local (PE-specific) files`
+    },
+    'diffusion': {
+      desc: 'Explicit diffusion-based correlation. Best for short length scales and ocean (handles land masks naturally). Requires pre-computed normalization files.',
+      yaml: (indent) => `${indent}saber block name: diffusion\n${indent}read:\n${indent}  groups:\n${indent}  - variables: &vars\n${indent}    - <variable_1>\n${indent}    - <variable_2>\n${indent}    horizontal:\n${indent}      filepath: <path/to/horizontal_normalization>\n${indent}    vertical:\n${indent}      levels: <num_levels>\n${indent}      filepath: <path/to/vertical_normalization>`
+    },
+    'spectral covariance': {
+      desc: 'Full 3D covariance in spectral space. For global models on Gaussian grids. Includes vertical cross-level covariances.',
+      yaml: (indent) => `${indent}saber block name: spectral covariance\n${indent}read:\n${indent}  covariance file:\n${indent}    filepath: <path/to/spectral_covariance_stats>  # calibrated spectral statistics`
+    },
+    'spectral correlation': {
+      desc: 'Correlation-only version of spectral covariance (no variance). Same statistics file, but only correlation is applied.',
+      yaml: (indent) => `${indent}saber block name: spectral correlation\n${indent}read:\n${indent}  covariance file:\n${indent}    filepath: <path/to/spectral_covariance_stats>`
+    },
+    'FastLAM': {
+      desc: 'Fast limited-area model correlation using spectral methods (FFTW/ECTRANS). For regional/LAM domains.',
+      yaml: (indent) => `${indent}saber block name: FastLAM\n${indent}read:\n${indent}  filepath: <path/to/fastlam_data>\n${indent}layers:\n${indent}  - type: spectral   # or "halo" or "recursive"\n${indent}    resolution: 8`
+    },
+    'ID': {
+      desc: 'Identity (no-op). The simplest central block — passes increment through unchanged. Useful when outer blocks do all the work.',
+      yaml: (indent) => `${indent}saber block name: ID`
+    }
+  },
+  outer: {
+    'BUMP_StdDev': {
+      desc: 'Diagonal standard-deviation scaling (the Σ matrix). Multiplies each variable by its background error σ field.',
+      yaml: (indent) => `${indent}- saber block name: BUMP_StdDev\n${indent}  read:\n${indent}    model file:\n${indent}      filepath: <path/to/stddev_file>  # contains σ_b field per variable\n${indent}      # variables read from file should match active variables`
+    },
+    'BUMP_VerticalBalance': {
+      desc: 'Vertical balance operator (K). Decomposes variables into balanced (predictable from ψ) and unbalanced parts via regression.',
+      yaml: (indent) => `${indent}- saber block name: BUMP_VerticalBalance\n${indent}  read:\n${indent}    io:\n${indent}      data directory: <path/to/bump/data>\n${indent}      files prefix: <bump_vbal_prefix>\n${indent}    drivers:\n${indent}      read local sampling: true\n${indent}      read vertical balance: true\n${indent}    vertical balance:\n${indent}      vbal:\n${indent}      - balanced variable: velocity_potential\n${indent}        unbalanced variable: stream_function\n${indent}      - balanced variable: air_temperature\n${indent}        unbalanced variable: stream_function\n${indent}      - balanced variable: surface_pressure\n${indent}        unbalanced variable: stream_function`
+    },
+    'BUMP_PsiChiToUV': {
+      desc: 'Variable change: stream function (ψ) and velocity potential (χ) → u,v winds. Uses smooth derivative estimates.',
+      yaml: (indent) => `${indent}- saber block name: BUMP_PsiChiToUV\n${indent}  read:\n${indent}    io:\n${indent}      data directory: <path/to/bump/data>\n${indent}      files prefix: <bump_psichitouv_prefix>\n${indent}    drivers:\n${indent}      read local psichitouv: true`
+    },
+    'StdDev': {
+      desc: 'Generic standard-deviation block. Reads σ from a model file (simpler than BUMP_StdDev, no filtering).',
+      yaml: (indent) => `${indent}- saber block name: StdDev\n${indent}  read:\n${indent}    model file:\n${indent}      filepath: <path/to/stddev_fields>`
+    },
+    'interpolation': {
+      desc: 'Grid interpolation between B-matrix geometry and model geometry. Allows B to be computed on a different (often coarser) grid.',
+      yaml: (indent) => `${indent}- saber block name: interpolation\n${indent}  inner geometry:\n${indent}    function space: StructuredColumns   # or NodeColumns, etc.\n${indent}    grid:\n${indent}      type: regular_gaussian\n${indent}      N: <gaussian_number>               # resolution of B-matrix grid\n${indent}  forward interpolator:\n${indent}    local interpolator type: oops unstructured grid interpolator\n${indent}  inverse interpolator:\n${indent}    local interpolator type: oops unstructured grid interpolator`
+    },
+    'spectral to gauss': {
+      desc: 'Inverse spherical harmonic transform (spectral → Gaussian grid). Required when using spectral central blocks.',
+      yaml: (indent) => `${indent}- saber block name: spectral to gauss\n${indent}  inner geometry:\n${indent}    function space: StructuredColumns\n${indent}    grid:\n${indent}      type: regular_gaussian\n${indent}      N: <gaussian_number>`
+    },
+    'spectral analytical filter': {
+      desc: 'Multiplication by analytical function in spectral space. Used for horizontal localization (Gaussian) or bandpass filtering.',
+      yaml: (indent) => `${indent}- saber block name: spectral analytical filter\n${indent}  function:\n${indent}    horizontal daley length: 2000.0e3  # localization length in meters`
+    },
+    'VertLoc': {
+      desc: 'Vertical localization operator. Applies localization in the vertical direction independently of horizontal.',
+      yaml: (indent) => `${indent}- saber block name: VertLoc\n${indent}  covariance:\n${indent}    vertical length-scale: 0.5  # in vertical coordinate units`
+    },
+    'DuplicateVariables': {
+      desc: 'Copies one variable increment to duplicate into other variables. Useful for applying same correlation to multiple fields.',
+      yaml: (indent) => `${indent}- saber block name: DuplicateVariables\n${indent}  duplicated variables:\n${indent}    <target_variable>: <source_variable>`
+    },
+    'TorchBalance': {
+      desc: 'ML-based balance operator using PyTorch/TorchScript models. Provides cross-variable Jacobians for coupled DA.',
+      yaml: (indent) => `${indent}- saber block name: TorchBalance\n${indent}  surface emulators:\n${indent}  - name: <output_variable>\n${indent}    path: <path/to/torchscript_model.ts>\n${indent}    jacobian wrt:\n${indent}    - <input_variable_1>\n${indent}    - <input_variable_2>`
+    }
+  }
+};
+
+let state = {
+  covType: '',
+  centralBlock: '',
+  outerBlocks: [],
+  locCentralBlock: '',
+  locOuterBlocks: []
+};
+
+function renderAll() {
+  renderYaml();
+  renderChain();
+  renderWarnings();
+}
+
+function onCovTypeChange() {
+  state.covType = document.getElementById('cov-type').value;
+  state.centralBlock = '';
+  state.outerBlocks = [];
+  state.locCentralBlock = '';
+  state.locOuterBlocks = [];
+
+  const centralStep = document.getElementById('step-central');
+  const locStep = document.getElementById('step-localization');
+  const outerStep = document.getElementById('step-outer');
+  const locOuterStep = document.getElementById('step-loc-outer');
+  const centralSelect = document.getElementById('central-block');
+
+  centralStep.style.display = 'none';
+  locStep.style.display = 'none';
+  outerStep.style.display = 'none';
+  locOuterStep.style.display = 'none';
+
+  if (!state.covType) { renderAll(); return; }
+
+  // Populate central block options based on covariance type
+  let opts = '<option value="">-- Select central block --</option>';
+  if (state.covType === 'parametric') {
+    Object.keys(blockData.central).forEach(k => {
+      opts += `<option value="${k}">${k}</option>`;
+    });
+  } else if (state.covType === 'ensemble') {
+    // For ensemble, central is always "Ensemble" — user picks localization
+    state.centralBlock = 'Ensemble';
+    locStep.style.display = 'block';
+    outerStep.style.display = 'block';
+    locOuterStep.style.display = 'block';
+    populateLocCentralOptions();
+    populateOuterOptions();
+    populateLocOuterOptions();
+    showBlockSummary('ensemble');
+    renderAll();
+    return;
+  } else if (state.covType === 'hybrid') {
+    // Hybrid uses "Hybrid" as central — but we still let them configure
+    state.centralBlock = 'Hybrid';
+    locStep.style.display = 'block';
+    outerStep.style.display = 'block';
+    locOuterStep.style.display = 'block';
+    populateLocCentralOptions();
+    populateOuterOptions();
+    populateLocOuterOptions();
+    showBlockSummary('hybrid');
+    renderAll();
+    return;
+  }
+
+  centralSelect.innerHTML = opts;
+  centralStep.style.display = 'block';
+  showBlockSummary('parametric');
+  renderAll();
+}
+
+function populateLocCentralOptions() {
+  const sel = document.getElementById('loc-central-block');
+  let opts = '<option value="">-- Select localization block --</option>';
+  Object.keys(blockData.central).forEach(k => {
+    if (k !== 'Ensemble' && k !== 'Hybrid') {
+      opts += `<option value="${k}">${k}</option>`;
+    }
+  });
+  sel.innerHTML = opts;
+}
+
+function populateOuterOptions() {
+  const sel = document.getElementById('outer-block-select');
+  let opts = '<option value="">-- Select an outer block to add --</option>';
+  Object.keys(blockData.outer).forEach(k => {
+    opts += `<option value="${k}">${k}</option>`;
+  });
+  sel.innerHTML = opts;
+  document.getElementById('step-outer').style.display = 'block';
+}
+
+function populateLocOuterOptions() {
+  const sel = document.getElementById('loc-outer-block-select');
+  let opts = '<option value="">-- Select an outer block --</option>';
+  Object.keys(blockData.outer).forEach(k => {
+    opts += `<option value="${k}">${k}</option>`;
+  });
+  sel.innerHTML = opts;
+}
+
+function onCentralChange() {
+  state.centralBlock = document.getElementById('central-block').value;
+  const infoDiv = document.getElementById('central-info');
+  if (state.centralBlock && blockData.central[state.centralBlock]) {
+    infoDiv.innerHTML = blockData.central[state.centralBlock].desc;
+    infoDiv.style.display = 'block';
+    populateOuterOptions();
+    showBlockSummary(state.centralBlock);
+  } else {
+    infoDiv.style.display = 'none';
+    document.getElementById('step-outer').style.display = 'none';
+  }
+  renderAll();
+}
+
+function onLocCentralChange() {
+  state.locCentralBlock = document.getElementById('loc-central-block').value;
+  const infoDiv = document.getElementById('loc-info');
+  if (state.locCentralBlock && blockData.central[state.locCentralBlock]) {
+    infoDiv.innerHTML = blockData.central[state.locCentralBlock].desc;
+    infoDiv.style.display = 'block';
+    showBlockSummary(state.locCentralBlock);
+  } else {
+    infoDiv.style.display = 'none';
+  }
+  renderAll();
+}
+
+function addOuterBlock() {
+  const sel = document.getElementById('outer-block-select');
+  const val = sel.value;
+  if (!val) return;
+  state.outerBlocks.push(val);
+  sel.value = '';
+  showBlockSummary(val);
+  renderAll();
+}
+
+function addLocOuterBlock() {
+  const sel = document.getElementById('loc-outer-block-select');
+  const val = sel.value;
+  if (!val) return;
+  state.locOuterBlocks.push(val);
+  sel.value = '';
+  showBlockSummary(val);
+  renderAll();
+}
+
+function removeOuterBlock(idx) {
+  state.outerBlocks.splice(idx, 1);
+  renderAll();
+}
+
+function removeLocOuterBlock(idx) {
+  state.locOuterBlocks.splice(idx, 1);
+  renderAll();
+}
+
+function resetAll() {
+  state = { covType: '', centralBlock: '', outerBlocks: [], locCentralBlock: '', locOuterBlocks: [] };
+  document.getElementById('cov-type').value = '';
+  document.getElementById('step-central').style.display = 'none';
+  document.getElementById('step-localization').style.display = 'none';
+  document.getElementById('step-outer').style.display = 'none';
+  document.getElementById('step-loc-outer').style.display = 'none';
+  document.getElementById('central-info').style.display = 'none';
+  document.getElementById('loc-info').style.display = 'none';
+  document.getElementById('block-summary').classList.remove('visible');
+  renderAll();
+}
+
+function renderChain() {
+  const container = document.getElementById('chain-display');
+  let html = '';
+
+  if (!state.covType) {
+    html = '<div class="chain-block empty" onclick="document.getElementById(\'cov-type\').focus()">Select covariance type to begin</div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  // Layout matches jedi-docs figure_saber_blocks_2.jpg:
+  //   Output ← TL block N ← ... ← TL block 1 ← Central ← AD block 1 ← ... ← AD block N ← Input
+
+  // Add button (leftmost — adds to the output end)
+  html += '<div class="chain-block empty" onclick="document.getElementById(\'outer-block-select\').focus()">+ outer</div>';
+  html += '<span class="chain-arrow">&larr;</span>';
+
+  // TL outer blocks (outermost first = reverse of array order)
+  const outerRev = [...state.outerBlocks].reverse();
+  for (let i = 0; i < outerRev.length; i++) {
+    const origIdx = state.outerBlocks.length - 1 - i;
+    html += `<div class="chain-block outer-tl" onclick="showBlockSummary('${outerRev[i]}')">${outerRev[i]}<br><small>(TL)</small><button class="remove-btn" onclick="event.stopPropagation();removeOuterBlock(${origIdx})">×</button></div>`;
+    html += '<span class="chain-arrow">&larr;</span>';
+  }
+
+  // Central block
+  let centralLabel = state.centralBlock || '?';
+  let centralKey = state.centralBlock;
+  if (state.covType === 'ensemble') { centralLabel = 'Ensemble'; centralKey = 'Ensemble'; }
+  if (state.covType === 'hybrid') { centralLabel = 'Hybrid'; centralKey = 'Hybrid'; }
+  html += `<div class="chain-block central" onclick="showBlockSummary('${centralKey}')">${centralLabel}</div>`;
+
+  // AD outer blocks (innermost first = forward array order)
+  for (let i = 0; i < state.outerBlocks.length; i++) {
+    html += '<span class="chain-arrow">&larr;</span>';
+    html += `<div class="chain-block outer-ad" onclick="showBlockSummary('${state.outerBlocks[i]}')">${state.outerBlocks[i]}<br><small>(AD)</small><button class="remove-btn" onclick="event.stopPropagation();removeOuterBlock(${i})">×</button></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderYaml() {
+  const el = document.getElementById('yaml-output');
+
+  if (!state.covType) {
+    el.innerHTML = '<span class="comment"># Select a covariance type to begin building your B matrix...</span>\n\n<span class="comment"># The block chain structure is:</span>\n<span class="comment">#   B = T · V · K · Σ · C · Σᵀ · Kᵀ · Vᵀ · Tᵀ</span>\n<span class="comment">#</span>\n<span class="comment">#   C  = central block (correlation/covariance)</span>\n<span class="comment">#   Σ  = standard deviation (diagonal)</span>\n<span class="comment">#   K  = balance operator</span>\n<span class="comment">#   V  = variable change (ψ,χ → u,v)</span>\n<span class="comment">#   T  = interpolation</span>';
+    return;
+  }
+
+  let yaml = '';
+
+  if (state.covType === 'parametric') {
+    yaml = generateParametricYaml();
+  } else if (state.covType === 'ensemble') {
+    yaml = generateEnsembleYaml();
+  } else if (state.covType === 'hybrid') {
+    yaml = generateHybridYaml();
+  }
+
+  el.innerHTML = yaml;
+}
+
+function generateParametricYaml() {
+  let y = '';
+  y += h('# Parametric (Static) Background Error Covariance') + '\n';
+  y += k('background error') + ':\n';
+  y += '  ' + k('covariance model') + ': ' + v('SABER') + '\n';
+
+  if (state.centralBlock) {
+    y += '  ' + k('saber central block') + ':\n';
+    y += blockData.central[state.centralBlock].yaml('    ') + '\n';
+  } else {
+    y += '  ' + k('saber central block') + ':\n';
+    y += '    ' + h('# Choose a central block above') + '\n';
+  }
+
+  if (state.outerBlocks.length > 0) {
+    y += '  ' + k('saber outer blocks') + ':\n';
+    y += '  ' + h('# Listed innermost-first; applied bottom-to-top (AD) then top-to-bottom (TL)') + '\n';
+    for (const blk of state.outerBlocks) {
+      y += blockData.outer[blk].yaml('  ') + '\n';
+    }
+  } else {
+    y += '  ' + h('# saber outer blocks:  (add outer blocks for balance, stddev, interpolation, etc.)') + '\n';
+  }
+
+  return y;
+}
+
+function generateEnsembleYaml() {
+  let y = '';
+  y += h('# Ensemble Background Error Covariance with Localization') + '\n';
+  y += k('background error') + ':\n';
+  y += '  ' + k('covariance model') + ': ' + v('SABER') + '\n';
+
+  // Outer blocks (common to ensemble)
+  if (state.outerBlocks.length > 0) {
+    y += '  ' + k('saber outer blocks') + ':\n';
+    for (const blk of state.outerBlocks) {
+      y += blockData.outer[blk].yaml('  ') + '\n';
+    }
+  }
+
+  y += '  ' + k('saber central block') + ':\n';
+  y += '    ' + k('saber block name') + ': ' + v('Ensemble') + '\n';
+  y += '    ' + h('# Ensemble members configuration') + '\n';
+  y += '    ' + k('ensemble') + ':\n';
+  y += '      ' + k('members from template') + ':\n';
+  y += '        ' + k('template') + ':\n';
+  y += '          ' + k('datetime') + ': ' + v('<yyyy-mm-ddThh:mm:ssZ>') + '\n';
+  y += '          ' + k('filepath') + ': ' + v('<path/to/ensemble/member_%mem%>') + '\n';
+  y += '          ' + k('state variables') + ': ' + v('[var1, var2, ...]') + '\n';
+  y += '        ' + k('pattern') + ': ' + v("'%mem%'") + '\n';
+  y += '        ' + k('nmembers') + ': ' + v('<ensemble_size>') + '  ' + h('# e.g., 30-80') + '\n';
+  y += '        ' + k('zero padding') + ': ' + v('3') + '\n';
+  y += '    ' + h('# Localization sub-chain (applied as Schur product)') + '\n';
+  y += '    ' + k('localization') + ':\n';
+  y += '      ' + k('localization method') + ': ' + v('SABER') + '\n';
+
+  if (state.locCentralBlock) {
+    y += '      ' + k('saber central block') + ':\n';
+    y += blockData.central[state.locCentralBlock].yaml('        ') + '\n';
+  } else {
+    y += '      ' + k('saber central block') + ':\n';
+    y += '        ' + h('# Choose a localization central block') + '\n';
+  }
+
+  if (state.locOuterBlocks.length > 0) {
+    y += '      ' + k('saber outer blocks') + ':\n';
+    for (const blk of state.locOuterBlocks) {
+      y += '    ' + blockData.outer[blk].yaml('    ') + '\n';
+    }
+  }
+
+  return y;
+}
+
+function generateHybridYaml() {
+  let y = '';
+  y += h('# Hybrid Background Error Covariance (Static + Ensemble)') + '\n';
+  y += k('background error') + ':\n';
+  y += '  ' + k('covariance model') + ': ' + v('SABER') + '\n';
+
+  // Outermost outer blocks (common to all components)
+  if (state.outerBlocks.length > 0) {
+    y += '  ' + k('saber outer blocks') + ':\n';
+    y += '  ' + h('# Outer blocks common to ALL hybrid components') + '\n';
+    for (const blk of state.outerBlocks) {
+      y += blockData.outer[blk].yaml('  ') + '\n';
+    }
+  }
+
+  y += '  ' + k('saber central block') + ':\n';
+  y += '    ' + k('saber block name') + ': ' + v('Hybrid') + '\n';
+  y += '    ' + k('components') + ':\n';
+
+  // Component 1: Static
+  y += '    ' + h('# --- Component 1: Parametric/Static ---') + '\n';
+  y += '    - ' + k('weight') + ':\n';
+  y += '        ' + k('value') + ': ' + v('0.2') + '  ' + h('# static weight (α)') + '\n';
+  y += '      ' + k('covariance') + ':\n';
+  y += '        ' + k('saber central block') + ':\n';
+  if (state.locCentralBlock) {
+    y += blockData.central[state.locCentralBlock].yaml('          ') + '\n';
+  } else {
+    y += '          ' + h('# Select a central block for the static component') + '\n';
+  }
+  if (state.locOuterBlocks.length > 0) {
+    y += '        ' + k('saber outer blocks') + ':\n';
+    for (const blk of state.locOuterBlocks) {
+      y += '      ' + blockData.outer[blk].yaml('      ') + '\n';
+    }
+  }
+
+  // Component 2: Ensemble
+  y += '    ' + h('# --- Component 2: Ensemble ---') + '\n';
+  y += '    - ' + k('weight') + ':\n';
+  y += '        ' + k('value') + ': ' + v('0.8') + '  ' + h('# ensemble weight (β)') + '\n';
+  y += '      ' + k('covariance') + ':\n';
+  y += '        ' + k('ensemble') + ':\n';
+  y += '          ' + k('members from template') + ':\n';
+  y += '            ' + k('template') + ':\n';
+  y += '              ' + k('datetime') + ': ' + v('<yyyy-mm-ddThh:mm:ssZ>') + '\n';
+  y += '              ' + k('filepath') + ': ' + v('<path/to/ensemble/member_%mem%>') + '\n';
+  y += '              ' + k('state variables') + ': ' + v('[var1, var2, ...]') + '\n';
+  y += '            ' + k('pattern') + ': ' + v("'%mem%'") + '\n';
+  y += '            ' + k('nmembers') + ': ' + v('<ensemble_size>') + '\n';
+  y += '            ' + k('zero padding') + ': ' + v('3') + '\n';
+  y += '        ' + k('saber central block') + ':\n';
+  y += '          ' + k('saber block name') + ': ' + v('Ensemble') + '\n';
+  y += '          ' + k('localization') + ':\n';
+  y += '            ' + k('localization method') + ': ' + v('SABER') + '\n';
+  y += '            ' + k('saber central block') + ':\n';
+  y += '              ' + k('saber block name') + ': ' + v('BUMP_NICAS') + '  ' + h('# common choice for localization') + '\n';
+  y += '              ' + k('read') + ':\n';
+  y += '                ' + k('io') + ':\n';
+  y += '                  ' + k('data directory') + ': ' + v('<path/to/bump/loc/data>') + '\n';
+  y += '                  ' + k('files prefix') + ': ' + v('<loc_prefix>') + '\n';
+  y += '                ' + k('drivers') + ':\n';
+  y += '                  ' + k('multivariate strategy') + ': ' + v('duplicated') + '\n';
+  y += '                  ' + k('read local nicas') + ': ' + v('true') + '\n';
+
+  return y;
+}
+
+// Syntax highlighting helpers
+function h(text) { return `<span class="comment">${text}</span>`; }
+function k(text) { return `<span class="key">${text}</span>`; }
+function v(text) { return `<span class="value">${text}</span>`; }
+
+function copyYaml() {
+  const el = document.getElementById('yaml-output');
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy YAML', 1500);
+  });
+}
+
+// ─── Block Summary Panel ───
+
+const blockSummaries = {
+  // Central blocks
+  'BUMP_NICAS': {
+    type: 'central',
+    title: 'BUMP_NICAS — Normalized Interpolated Convolution on Adaptive Subgrid',
+    body: `<p>NICAS is the <strong>primary correlation operator</strong> for most JEDI applications. It models the <span class="math-note">C</span> matrix in the B decomposition — the spatial correlation structure that controls how far information from an observation spreads to surrounding grid points.</p>
+<p>It works by building an <strong>adaptive subgrid</strong> — a coarser mesh whose density tracks the local correlation length scale. Smoothing is performed as a convolution on this subgrid, then interpolated back to the full grid and normalized so the diagonal equals 1 (making it a true correlation). This makes it very efficient for <strong>large length scales</strong> (the subgrid can be much coarser than the model grid), but less so for short scales where the subgrid approaches full resolution.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — self-adjoint, applied once at the core of the block chain</span>
+  <span class="detail-label">Key parameter</span><span><strong>resolution</strong> (4–8 recommended): controls subgrid density; cost grows quadratically</span>
+  <span class="detail-label">Calibration</span><span>Offline via HDIAG + NICAS drivers in BUMP. Requires pre-computed length-scale fields.</span>
+  <span class="detail-label">Gotcha</span><span>Local NICAS files are <strong>PE-locked</strong> — tied to the MPI decomposition used during calibration. Changing PE count requires regenerating files.</span>
+</div>`
+  },
+
+  'diffusion': {
+    type: 'central',
+    title: 'Diffusion — Explicit Diffusion-Based Correlation',
+    body: `<p>Models spatial correlations by numerically solving the <strong>diffusion equation</strong>. Repeated application of the diffusion operator spreads an initial impulse into a bell-shaped curve — which <em>is</em> a correlation function. More iterations = wider spread = longer correlation length.</p>
+<p>The key advantage over NICAS is <strong>natural handling of complex boundaries</strong>. The finite-difference stencil easily respects land masks, coastlines, and topography — crucial for ocean DA where correlations must not cross continents. It also supports <strong>spatially varying correlation lengths</strong> by using different diffusion coefficients at different grid points.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — self-adjoint correlation operator</span>
+  <span class="detail-label">Best for</span><span>Ocean applications, short correlation lengths, domains with complex boundaries</span>
+  <span class="detail-label">Calibration</span><span>Normalization fields (horizontal via randomization, vertical via Dirac sheets). 20,000 iterations recommended for operational accuracy.</span>
+  <span class="detail-label">Trade-off</span><span>For large length scales, the CFL stability constraint demands many iterations — NICAS is more efficient there.</span>
+</div>`
+  },
+
+  'spectral covariance': {
+    type: 'central',
+    title: 'Spectral Covariance — Full 3D Covariance in Spectral Space',
+    body: `<p>Represents the full <strong>three-dimensional covariance</strong> in spherical harmonic (spectral) space. In spectral space, horizontal correlations become diagonal (each wavenumber is independent), which makes the operator very efficient. Vertical cross-level covariances are retained as dense matrices per wavenumber.</p>
+<p>This is the approach used by operational global NWP centres on <strong>Gaussian grids</strong> (e.g., ECMWF, Met Office). It naturally captures scale-dependent correlation structures — different length scales at different wavenumbers.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — full covariance (includes both correlation and variance)</span>
+  <span class="detail-label">Requires</span><span><strong>spectral to gauss</strong> outer block to bridge between grid-point and spectral spaces</span>
+  <span class="detail-label">Grid</span><span>Global Gaussian grids only — not suitable for regional/LAM or unstructured meshes</span>
+  <span class="detail-label">Calibration</span><span>Spectral statistics file computed from an ensemble of perturbations</span>
+</div>`
+  },
+
+  'spectral correlation': {
+    type: 'central',
+    title: 'Spectral Correlation — Correlation-Only Spectral Operator',
+    body: `<p>Same as <strong>spectral covariance</strong> but applies only the correlation component — the variance (diagonal) is factored out and handled by a separate StdDev outer block. This gives you more flexibility to tune or replace the variance independently of the correlation structure.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — correlation only (pair with a StdDev outer block for full B)</span>
+  <span class="detail-label">Requires</span><span><strong>spectral to gauss</strong> outer block, plus a StdDev block for variance scaling</span>
+  <span class="detail-label">Grid</span><span>Global Gaussian grids only</span>
+</div>`
+  },
+
+  'FastLAM': {
+    type: 'central',
+    title: 'FastLAM — Fast Limited-Area Model Correlation',
+    body: `<p>A correlation operator designed specifically for <strong>regional/limited-area model (LAM)</strong> domains. It uses bi-Fourier spectral methods (via FFTW or ECTRANS) to efficiently compute correlations on a rectangular domain, avoiding the spherical harmonic machinery needed for global grids.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — correlation for LAM domains</span>
+  <span class="detail-label">Grid</span><span>Regional/LAM rectangular domains only — will not work on global grids</span>
+  <span class="detail-label">Method</span><span>Bi-Fourier spectral transforms with periodic extension</span>
+</div>`
+  },
+
+  'ID': {
+    type: 'central',
+    title: 'ID — Identity (No-Op) Central Block',
+    body: `<p>The simplest possible central block: it passes the increment through <strong>unchanged</strong>. This is useful when the outer blocks are doing all the work — for example, when using <strong>spectral analytical filter</strong> as a self-adjoint outer block for localization, the central block can be ID since the filter itself provides the correlation structure.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — identity operator (B = outer blocks only)</span>
+  <span class="detail-label">Use case</span><span>Localization chains where outer blocks provide the spatial structure</span>
+</div>`
+  },
+
+  'Ensemble': {
+    type: 'central',
+    title: 'Ensemble — Flow-Dependent Ensemble Covariance',
+    body: `<p>Instead of a static, pre-calibrated correlation, the <strong>Ensemble</strong> block computes <span class="math-note">B<sub>ens</sub></span> directly from a set of ensemble forecast perturbations. This gives a <strong>flow-dependent</strong> covariance that adapts to the current weather situation — correlations stretch along fronts, tighten near convection, etc.</p>
+<p>The raw ensemble covariance is contaminated by <strong>sampling noise</strong> (spurious long-range correlations from finite ensemble size). A <strong>localization</strong> sub-chain is applied as a Schur (element-wise) product to taper these artifacts: <span class="math-note">B<sub>eff</sub> = L ∘ B<sub>ens</sub></span>. Larger ensembles need less aggressive localization.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — wraps ensemble members and a localization sub-chain</span>
+  <span class="detail-label">Members</span><span>Typically 30–80 for operational; ensemble mean is removed internally</span>
+  <span class="detail-label">Localization</span><span>Usually BUMP_NICAS, diffusion, or spectral analytical filter</span>
+  <span class="detail-label">Key advantage</span><span>Flow-dependent — captures situation-specific error structures that static B cannot</span>
+</div>`
+  },
+
+  'Hybrid': {
+    type: 'central',
+    title: 'Hybrid — Weighted Sum of Static + Ensemble Covariance',
+    body: `<p>Combines the best of both worlds: a <strong>static (parametric) B</strong> that provides a reliable, climatological baseline, plus a <strong>flow-dependent ensemble B</strong> that captures situation-specific structure. The two are combined as a weighted sum:</p>
+<p style="text-align:center;"><span class="math-note">B<sub>hybrid</sub> = &alpha; B<sub>static</sub> + &beta; B<sub>ensemble</sub></span></p>
+<p>Typical operational weights are <strong>&alpha; = 0.1–0.3</strong> (static) and <strong>&beta; = 0.7–0.9</strong> (ensemble). The static component prevents filter divergence when the ensemble spread collapses; the ensemble component captures flow-dependent features the static B misses.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Central block — contains a list of weighted covariance components</span>
+  <span class="detail-label">Components</span><span>Each component has its own sub-chain (central + outer blocks) and weight</span>
+  <span class="detail-label">Common setup</span><span>Static BUMP_NICAS + Ensemble with NICAS localization</span>
+</div>`
+  },
+
+  // Outer blocks
+  'BUMP_StdDev': {
+    type: 'outer',
+    title: 'BUMP_StdDev — Background Error Standard Deviation (via BUMP)',
+    body: `<p>Applies the <span class="math-note">&Sigma;</span> matrix in the B decomposition — a <strong>diagonal scaling</strong> that converts dimensionless correlations into physically-scaled covariances. Each grid point and variable is multiplied by its background error standard deviation &sigma;<sub>b</sub>.</p>
+<p>Unlike the generic StdDev block, BUMP_StdDev uses the <strong>BUMP VAR driver</strong> to diagnose variance from an ensemble and can <strong>filter/smooth</strong> the resulting &sigma; fields using BUMP's spatial filtering infrastructure. This prevents noisy raw ensemble variance from degrading the analysis.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — innermost (closest to the central correlation block)</span>
+  <span class="detail-label">Math</span><span>Multiplies by &sigma;<sub>b</sub> on forward pass; same on adjoint (diagonal is self-adjoint)</span>
+  <span class="detail-label">vs. StdDev</span><span>BUMP_StdDev can diagnose + filter from ensemble; generic StdDev reads a pre-computed file as-is</span>
+</div>`
+  },
+
+  'StdDev': {
+    type: 'outer',
+    title: 'StdDev — Generic Standard Deviation Scaling',
+    body: `<p>A simpler version of the <span class="math-note">&Sigma;</span> operator. Reads pre-computed standard deviation fields from a <strong>model file, Atlas file, or vertical profile</strong> and applies them as a diagonal scaling — no ensemble diagnosis, no filtering.</p>
+<p>Use this when you already have trusted &sigma;<sub>b</sub> fields (e.g., from a previous calibration cycle or from a different system) and don't need BUMP's filtering. Works with any central block family — not tied to BUMP infrastructure.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — typically innermost, closest to central block</span>
+  <span class="detail-label">Input sources</span><span>Model file, Atlas file, or 1D vertical profile</span>
+  <span class="detail-label">Extra</span><span>Has a <strong>stddev scale factor</strong> parameter for simple multiplicative tuning</span>
+</div>`
+  },
+
+  'BUMP_VerticalBalance': {
+    type: 'outer',
+    title: 'BUMP_VerticalBalance — Physical Balance Operator',
+    body: `<p>Implements the <span class="math-note">K</span> (balance) operator that decomposes atmospheric variables into <strong>balanced</strong> and <strong>unbalanced</strong> parts. This is the key to making univariate correlation modeling work for a multivariate atmosphere.</p>
+<p><strong>Why?</strong> Atmospheric variables are physically linked — wind and pressure are coupled by geostrophic balance, temperature and pressure by hydrostatic balance. If we model correlations independently per variable, the analysis violates these constraints. The balance operator factors out the predictable (balanced) component via <strong>linear regression</strong> from a control variable (typically streamfunction &psi;), leaving independent unbalanced residuals that <em>can</em> be treated with univariate correlations.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — between StdDev (inner) and PsiChiToUV (outer)</span>
+  <span class="detail-label">Forward (TL)</span><span>Adds balanced components back: x<sub>full</sub> = x<sub>balanced</sub>(&psi;) + x<sub>unbal</sub></span>
+  <span class="detail-label">Adjoint (AD)</span><span>Removes balanced part: extracts unbalanced residuals</span>
+  <span class="detail-label">Calibration</span><span>BUMP VBAL driver computes regression coefficients from ensemble covariances</span>
+</div>`
+  },
+
+  'BUMP_PsiChiToUV': {
+    type: 'outer',
+    title: 'BUMP_PsiChiToUV — Wind Variable Change',
+    body: `<p>Implements the <span class="math-note">V</span> (variable change) operator: converts between <strong>streamfunction &psi; / velocity potential &chi;</strong> and <strong>u,v wind components</strong>. This is the outermost transform in a typical BUMP chain.</p>
+<p><strong>Why not work directly with u,v?</strong> Streamfunction and velocity potential cleanly separate the rotational and divergent parts of the wind field. This separation is essential for the balance operator (which regresses other variables against &psi;) and produces better-conditioned correlations — the rotational wind typically has much larger error variance than the divergent component.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — outermost in the BUMP chain</span>
+  <span class="detail-label">Forward (TL)</span><span>(&psi;, &chi;) &rarr; (u, v) via smooth spatial derivatives</span>
+  <span class="detail-label">Adjoint (AD)</span><span>(u, v) &rarr; (&psi;, &chi;)</span>
+  <span class="detail-label">Depends on</span><span>BUMP_VerticalBalance (for the balance to work on &psi;, &chi; variables)</span>
+</div>`
+  },
+
+  'interpolation': {
+    type: 'outer',
+    title: 'Interpolation — Grid-to-Grid Transform',
+    body: `<p>Implements the <span class="math-note">T</span> (interpolation) operator: maps between the <strong>model grid</strong> and a (typically coarser) <strong>B-matrix grid</strong>. This lets you compute B on a cheaper, lower-resolution grid while the model runs on the full-resolution grid.</p>
+<p>This is usually the <strong>outermost block</strong> in the chain, so all inner blocks (balance, StdDev, correlation) operate on the B-matrix geometry rather than the full model geometry.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — typically outermost (model grid &harr; B grid)</span>
+  <span class="detail-label">Method</span><span>OOPS unstructured grid interpolator (or Atlas-based)</span>
+  <span class="detail-label">Key parameter</span><span><strong>inner geometry</strong>: defines the B-matrix grid (type, resolution)</span>
+</div>`
+  },
+
+  'spectral to gauss': {
+    type: 'outer',
+    title: 'Spectral to Gauss — Spherical Harmonic Transform',
+    body: `<p>Performs the <strong>inverse spherical harmonic transform</strong> — converting between spectral (wavenumber) space and Gaussian grid-point space. This is the required bridge when using spectral central blocks or the spectral analytical filter.</p>
+<p>In the forward (TL) direction: spectral &rarr; Gaussian grid. In the adjoint: Gaussian grid &rarr; spectral. The <strong>inner geometry</strong> is spectral; the outer geometry is the Gaussian grid.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — innermost when using spectral blocks (bridges spectral &harr; grid-point)</span>
+  <span class="detail-label">Requires</span><span>Gaussian grid geometry and a spectral truncation number N</span>
+  <span class="detail-label">Used with</span><span>spectral covariance, spectral correlation, spectral analytical filter</span>
+</div>`
+  },
+
+  'spectral analytical filter': {
+    type: 'outer',
+    title: 'Spectral Analytical Filter — Localization/Filtering in Spectral Space',
+    body: `<p>Multiplies by an <strong>analytical function in spectral space</strong>, which is equivalent to convolution in physical space. The most common use is <strong>horizontal localization</strong> with a Gaussian taper, specified by the "horizontal Daley length."</p>
+<p>Since it is a <strong>self-adjoint outer block</strong>, it gets applied twice in a full B multiplication (once on the AD pass, once on the TL pass). The block accounts for this — the specified Daley length is the effective length after both applications.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — sits outside spectral to gauss; applied as localization or bandpass filter</span>
+  <span class="detail-label">Key parameter</span><span><strong>horizontal daley length</strong>: localization length scale in meters</span>
+  <span class="detail-label">Also used for</span><span>Waveband decomposition (triangle, boxcar, trapezoid filter shapes in ProcessPerts)</span>
+  <span class="detail-label">Requires</span><span>spectral to gauss block inward to provide the spectral geometry</span>
+</div>`
+  },
+
+  'VertLoc': {
+    type: 'outer',
+    title: 'VertLoc — Vertical Localization',
+    body: `<p>Applies <strong>localization in the vertical direction only</strong>, independently of horizontal localization. Useful when you want different vertical and horizontal localization scales, or when horizontal localization is handled by a different block (e.g., spectral analytical filter for horizontal, VertLoc for vertical).</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — typically used in localization sub-chains</span>
+  <span class="detail-label">Key parameter</span><span><strong>vertical length-scale</strong>: localization distance in vertical coordinate units</span>
+  <span class="detail-label">Note</span><span>If your central block (e.g., NICAS) already provides 3D localization, adding VertLoc applies additional vertical tapering on top</span>
+</div>`
+  },
+
+  'DuplicateVariables': {
+    type: 'outer',
+    title: 'DuplicateVariables — Variable Grouping and Duplication',
+    body: `<p>Copies one variable's increment to create identical increments for other variables. This is used when you want to <strong>apply the same correlation/localization to multiple fields</strong> without computing it separately for each.</p>
+<p>For example, in the Met Office spectral localization setup, u-wind and v-wind are grouped into a single "summed_variables" field, localized once, then the result is duplicated back to both components.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — typically in the outer part of the chain (before the correlation sees individual variables)</span>
+  <span class="detail-label">Use case</span><span>Applying identical localization to multiple variables efficiently</span>
+</div>`
+  },
+
+  'TorchBalance': {
+    type: 'outer',
+    title: 'TorchBalance — Machine-Learning Balance Operator',
+    body: `<p>A <strong>PyTorch-based balance operator</strong> that uses TorchScript models to provide cross-variable Jacobians. Unlike the physically-derived BUMP_VerticalBalance, this learns the relationship between variables from data — useful for <strong>coupled DA</strong> interfaces (e.g., ocean-atmosphere coupling) where simple linear regression may not capture the relationship.</p>
+<div class="detail-row">
+  <span class="detail-label">Chain role</span><span>Outer block — provides pointwise cross-variable balance (no spatial correlations)</span>
+  <span class="detail-label">Requires</span><span>PyTorch 2.8–2.10 and a pre-trained TorchScript model</span>
+  <span class="detail-label">Limitation</span><span>Currently single-level only — designed for surface/interface coupling, not full 3D balance</span>
+</div>`
+  },
+
+  // Covariance types
+  'parametric': {
+    type: 'cov',
+    title: 'Parametric (Static) B — Pre-Calibrated Background Error',
+    body: `<p>A <strong>static, climatological B matrix</strong> calibrated offline from a historical ensemble or innovation statistics. The correlation structure is fixed — it does not change from cycle to cycle. This is the simplest B formulation and serves as the foundation for more advanced approaches.</p>
+<p>The full block chain <span class="math-note">B = T &middot; V &middot; K &middot; &Sigma; &middot; C &middot; &Sigma;<sup>T</sup> &middot; K<sup>T</sup> &middot; V<sup>T</sup> &middot; T<sup>T</sup></span> is built from a central correlation block plus outer blocks for variable change, balance, and standard deviation.</p>
+<div class="detail-row">
+  <span class="detail-label">Strengths</span><span>Reliable, cheap, no ensemble required at runtime</span>
+  <span class="detail-label">Weakness</span><span>Cannot capture flow-dependent error structures (e.g., errors stretching along a front)</span>
+  <span class="detail-label">Typical use</span><span>3D-Var, or as the static component of hybrid DA</span>
+</div>`
+  },
+
+  'ensemble': {
+    type: 'cov',
+    title: 'Ensemble B — Flow-Dependent Covariance from Ensemble',
+    body: `<p>Computes B <strong>directly from ensemble forecast perturbations</strong>, giving a flow-dependent covariance that adapts to the current atmospheric state. The ensemble covariance is localized via Schur product to suppress spurious correlations from finite sample size.</p>
+<div class="detail-row">
+  <span class="detail-label">Strengths</span><span>Flow-dependent — captures situation-specific error structures</span>
+  <span class="detail-label">Weakness</span><span>Rank-deficient (rank = N<sub>ens</sub>-1), noisy without localization, requires running an ensemble</span>
+  <span class="detail-label">Typical use</span><span>EnVar, or as the ensemble component of hybrid DA</span>
+</div>`
+  },
+
+  'hybrid': {
+    type: 'cov',
+    title: 'Hybrid B — Best of Static + Ensemble',
+    body: `<p>Combines a static and an ensemble component as a <strong>weighted sum</strong>: <span class="math-note">B = &alpha; B<sub>static</sub> + &beta; B<sub>ens</sub></span>. This is the approach used by most operational NWP centres because it provides flow-dependence from the ensemble while the static component prevents filter divergence.</p>
+<div class="detail-row">
+  <span class="detail-label">Typical weights</span><span>&alpha; = 0.1–0.3 (static), &beta; = 0.7–0.9 (ensemble)</span>
+  <span class="detail-label">Static component</span><span>Provides full-rank baseline; covers scales the ensemble undersamples</span>
+  <span class="detail-label">Ensemble component</span><span>Adds flow-dependent structure; localized to suppress sampling noise</span>
+</div>`
+  },
+};
+
+function showBlockSummary(blockName) {
+  const panel = document.getElementById('block-summary');
+  const info = blockSummaries[blockName];
+  if (!info) { panel.classList.remove('visible'); return; }
+
+  const tag = document.getElementById('summary-tag');
+  tag.textContent = info.type === 'central' ? 'Central Block' :
+                    info.type === 'outer' ? 'Outer Block' : 'Covariance Type';
+  tag.className = 'block-tag ' + (info.type === 'central' ? 'central-tag' :
+                                   info.type === 'outer' ? 'outer-tag' : 'cov-tag');
+
+  document.getElementById('summary-title').textContent = info.title;
+  document.getElementById('summary-body').innerHTML = info.body;
+  panel.classList.add('visible');
+}
+
+// ─── Admissibility Constraint Engine ───
+// Rules derived from SABER source (SaberOuterBlockChain.h, PsiChiToUV.cc,
+// SpectralToGauss.h) and validated test YAMLs (dirac_bump_1.yaml,
+// dirac_spectralb_gauss_1.yaml, dirac_diffusion_1.yaml).
+
+const constraints = [
+
+  // ── BUMP outer block ordering ──
+  // Confirmed by dirac_bump_1.yaml lines 50-108: the chain lists
+  // BUMP_StdDev (innermost) → BUMP_VerticalBalance → BUMP_PsiChiToUV (outermost).
+  // YAML order = innermost-first, so StdDev should appear before VerticalBalance
+  // in the array, and VerticalBalance before PsiChiToUV.
+  {
+    id: 'bump-order-stddev-vbal',
+    check(s) {
+      const iStd = lastIndex(s.outerBlocks, 'BUMP_StdDev');
+      const iVbal = s.outerBlocks.indexOf('BUMP_VerticalBalance');
+      if (iStd >= 0 && iVbal >= 0 && iStd > iVbal)
+        return 'BUMP_StdDev should be listed before BUMP_VerticalBalance (innermost first in YAML). StdDev applies the diagonal Σ scaling closest to the central correlation block; VerticalBalance sits further out.';
+    }
+  },
+  {
+    id: 'bump-order-stddev-psichi',
+    check(s) {
+      const iStd = lastIndex(s.outerBlocks, 'BUMP_StdDev');
+      const iPsi = s.outerBlocks.indexOf('BUMP_PsiChiToUV');
+      if (iStd >= 0 && iPsi >= 0 && iStd > iPsi)
+        return 'BUMP_StdDev should be listed before BUMP_PsiChiToUV. The Σ (standard deviation) scaling goes close to the central block; the ψ,χ→u,v variable change is the outermost transform.';
+    }
+  },
+  {
+    id: 'bump-order-vbal-psichi',
+    check(s) {
+      const iVbal = s.outerBlocks.indexOf('BUMP_VerticalBalance');
+      const iPsi = s.outerBlocks.indexOf('BUMP_PsiChiToUV');
+      if (iVbal >= 0 && iPsi >= 0 && iVbal > iPsi)
+        return 'BUMP_VerticalBalance should be listed before BUMP_PsiChiToUV. Balance decomposes variables into balanced/unbalanced parts inward of the ψ,χ→u,v variable change.';
+    }
+  },
+
+  // ── Spectral blocks need spectral-to-gauss ──
+  // Confirmed by dirac_spectralb_gauss_1.yaml: spectral analytical filter
+  // (central) always has spectral to gauss as its innermost outer block.
+  // SpectralToGauss.h: outer geometry is Gaussian, inner is Spectral.
+  {
+    id: 'spectral-filter-needs-s2g',
+    check(s) {
+      if (s.centralBlock === 'spectral covariance' || s.centralBlock === 'spectral correlation') {
+        if (!s.outerBlocks.includes('spectral to gauss'))
+          return 'Spectral central blocks operate in spectral space. You need a "spectral to gauss" outer block to transform between the model’s Gaussian grid and spectral space (SpectralToGauss.h provides this bridge).';
+      }
+    }
+  },
+  {
+    id: 'spectral-filter-needs-s2g-outer',
+    check(s) {
+      if (s.outerBlocks.includes('spectral analytical filter') && !s.outerBlocks.includes('spectral to gauss')) {
+        return 'The spectral analytical filter operates in spectral space. A "spectral to gauss" block must appear below it (closer to innermost) to provide the spectral ↔ grid-point transform.';
+      }
+    }
+  },
+  {
+    id: 'spectral-filter-order-s2g',
+    check(s) {
+      const iFilter = s.outerBlocks.indexOf('spectral analytical filter');
+      const iS2G = s.outerBlocks.indexOf('spectral to gauss');
+      if (iFilter >= 0 && iS2G >= 0 && iFilter < iS2G)
+        return 'The "spectral analytical filter" should be listed after "spectral to gauss" in the YAML (i.e. further from center). The filter works in spectral space, so spectral-to-gauss must sit inward to provide the spectral geometry.';
+    }
+  },
+  // Same rules for localization sub-chain
+  {
+    id: 'loc-spectral-filter-needs-s2g',
+    check(s) {
+      if (s.locCentralBlock === 'spectral covariance' || s.locCentralBlock === 'spectral correlation') {
+        if (!s.locOuterBlocks.includes('spectral to gauss'))
+          return 'Localization: spectral central blocks need a "spectral to gauss" outer block in the localization sub-chain to bridge spectral and grid-point spaces.';
+      }
+    }
+  },
+
+  // ── PsiChiToUV without VerticalBalance ──
+  // PsiChiToUV transforms (psi, chi) -> (u, v). Without balance, the variables
+  // inside the chain are (psi, chi) but nothing decomposes them into
+  // balanced/unbalanced parts, which is physically incomplete (though not illegal).
+  {
+    id: 'psichi-without-vbal',
+    check(s) {
+      if (s.outerBlocks.includes('BUMP_PsiChiToUV') && !s.outerBlocks.includes('BUMP_VerticalBalance'))
+        return 'BUMP_PsiChiToUV converts ψ,χ → u,v but you have no BUMP_VerticalBalance. Without balance, all variables are treated as independent — the analysis won’t enforce physical constraints like geostrophic or hydrostatic balance between wind and mass fields.';
+    }
+  },
+
+  // ── VerticalBalance without PsiChiToUV ──
+  // VerticalBalance operates on streamfunction/velocity-potential variables.
+  // Without PsiChiToUV, the model variables (u,v) never get converted to (psi,chi).
+  {
+    id: 'vbal-without-psichi',
+    check(s) {
+      if (s.outerBlocks.includes('BUMP_VerticalBalance') && !s.outerBlocks.includes('BUMP_PsiChiToUV'))
+        return 'BUMP_VerticalBalance operates on streamfunction/velocity-potential variables. Without BUMP_PsiChiToUV to convert u,v → ψ,χ, the balance operator won’t see the correct input variables.';
+    }
+  },
+
+  // ── Missing StdDev with BUMP_NICAS ──
+  // NICAS produces correlations (diagonal = 1). Without StdDev, the increment
+  // has no physical scaling — it's a correlation, not a covariance.
+  {
+    id: 'nicas-without-stddev',
+    check(s) {
+      if (s.centralBlock === 'BUMP_NICAS' &&
+          !s.outerBlocks.includes('BUMP_StdDev') &&
+          !s.outerBlocks.includes('StdDev'))
+        return 'BUMP_NICAS produces a correlation matrix (diagonal = 1). Without a standard-deviation block (Σ), your B matrix has no physical variance scaling — increments will be dimensionless correlations rather than properly scaled covariances.';
+    }
+  },
+
+  // ── Diffusion + BUMP outer blocks ──
+  // Diffusion is its own family; BUMP outer blocks expect BUMP infrastructure.
+  // Not a hard error, but mixing families is unusual and worth flagging.
+  {
+    id: 'diffusion-with-bump-outers',
+    check(s) {
+      if (s.centralBlock === 'diffusion') {
+        const bumpOuters = s.outerBlocks.filter(b => b.startsWith('BUMP_'));
+        if (bumpOuters.length > 0)
+          return `Diffusion central block with BUMP outer blocks (${bumpOuters.join(', ')}). These come from different SABER families. BUMP blocks expect BUMP-calibrated files and unstructured-mesh infrastructure. Diffusion typically uses the generic StdDev block instead of BUMP_StdDev.`;
+      }
+    }
+  },
+
+  // ── Spectral central with BUMP outer blocks ──
+  {
+    id: 'spectral-with-bump-outers',
+    check(s) {
+      if (s.centralBlock === 'spectral covariance' || s.centralBlock === 'spectral correlation') {
+        const bumpOuters = s.outerBlocks.filter(b => b.startsWith('BUMP_'));
+        if (bumpOuters.length > 0)
+          return `Spectral central block with BUMP outer blocks (${bumpOuters.join(', ')}). The spectral family has its own balance and variable-change blocks (gauss winds to geostrophic pressure, mo_hydrostatic_pressure). BUMP blocks are designed for unstructured meshes, not spectral transforms.`;
+      }
+    }
+  },
+
+  // ── FastLAM is for limited-area models only ──
+  {
+    id: 'fastlam-note',
+    check(s) {
+      if (s.centralBlock === 'FastLAM')
+        return 'FastLAM is designed specifically for limited-area (regional) domains. It uses bi-Fourier spectral methods that assume a rectangular LAM domain. It will not work correctly on a global grid.';
+    }
+  },
+
+  // ── Ensemble mode without localization ──
+  {
+    id: 'ensemble-no-loc',
+    check(s) {
+      if (s.covType === 'ensemble' && !s.locCentralBlock)
+        return 'Ensemble B without localization. Raw ensemble correlations contain spurious long-range features due to finite sample size. Without localization (Schur product), these artifacts will pollute the analysis. Use BUMP_NICAS, diffusion, or spectral analytical filter as localization.';
+    }
+  },
+
+  // ── Hybrid without localization on ensemble component ──
+  {
+    id: 'hybrid-note-loc',
+    check(s) {
+      if (s.covType === 'hybrid' && !s.locCentralBlock)
+        return 'Hybrid B: the static component (step 2b selection) needs a central block for its parametric correlation. The ensemble component in the generated YAML uses BUMP_NICAS localization by default — adjust the localization block if needed.';
+    }
+  },
+
+  // ── TorchBalance usage note ──
+  {
+    id: 'torchbalance-note',
+    check(s) {
+      if (s.outerBlocks.includes('TorchBalance'))
+        return 'TorchBalance is a machine-learning balance operator (PyTorch/TorchScript). It provides pointwise cross-variable Jacobians but does NOT introduce spatial correlations. It requires PyTorch 2.8–2.10 and a pre-trained TorchScript model. Currently limited to single-level operations (e.g. coupled ocean-atmosphere interfaces).';
+    }
+  },
+
+  // ── DuplicateVariables position ──
+  // Should generally be outer (far from central) so the duplication happens
+  // before other transforms. Confirmed in dirac_spectralb_gauss_1.yaml: it
+  // appears as one of the outermost blocks in the chain.
+  {
+    id: 'dupvars-position',
+    check(s) {
+      const iDup = s.outerBlocks.indexOf('DuplicateVariables');
+      if (iDup >= 0 && iDup === 0 && s.outerBlocks.length > 1)
+        return 'DuplicateVariables is listed as the innermost outer block. It typically belongs further out in the chain so that variable duplication happens before inner transforms like StdDev or balance operate on the grouped variables.';
+    }
+  },
+
+  // ── Interpolation block should typically be outermost ──
+  {
+    id: 'interp-not-outermost',
+    check(s) {
+      const iInterp = s.outerBlocks.indexOf('interpolation');
+      if (iInterp >= 0 && iInterp < s.outerBlocks.length - 1) {
+        const outerOfInterp = s.outerBlocks.slice(iInterp + 1);
+        const nonInterp = outerOfInterp.filter(b => b !== 'interpolation');
+        if (nonInterp.length > 0)
+          return `Interpolation block is not the outermost. Typically, grid interpolation (model grid ↔ B-matrix grid) is the outermost transform so that all inner blocks operate on the B-matrix geometry. Blocks outside interpolation (${nonInterp.join(', ')}) will run on the model grid instead.`;
+      }
+    }
+  },
+
+  // ── VertLoc as localization note ──
+  {
+    id: 'vertloc-note',
+    check(s) {
+      if (s.locOuterBlocks.includes('VertLoc') && s.locCentralBlock === 'BUMP_NICAS')
+        return 'VertLoc with BUMP_NICAS localization: NICAS already provides 3D localization (horizontal + vertical). Adding a separate VertLoc outer block applies additional vertical tapering on top of NICAS’s built-in vertical correlation. This is valid but may over-localize vertically.';
+    }
+  },
+];
+
+function lastIndex(arr, val) {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i] === val) return i;
+  }
+  return -1;
+}
+
+function checkConstraints() {
+  const warnings = [];
+  for (const rule of constraints) {
+    const msg = rule.check(state);
+    if (msg) warnings.push({ id: rule.id, msg });
+  }
+  return warnings;
+}
+
+function renderWarnings() {
+  const container = document.getElementById('warnings-container');
+  const warnings = checkConstraints();
+  if (warnings.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = warnings.map(w =>
+    `<div class="warning-banner">` +
+    `<span class="warning-icon">⚠</span>` +
+    `<span class="warning-text">${w.msg}</span>` +
+    `</div>`
+  ).join('');
+}
+
+// Initialize
+renderAll();
+
+// Update outer block info on hover/change
+document.getElementById('outer-block-select').addEventListener('change', function() {
+  const info = document.getElementById('outer-info');
+  if (this.value && blockData.outer[this.value]) {
+    info.innerHTML = blockData.outer[this.value].desc;
+    info.style.display = 'block';
+  } else {
+    info.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
