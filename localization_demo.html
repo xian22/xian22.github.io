@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ensemble Covariance & Localization Demo</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 { text-align: center; font-size: 1.6em; margin-bottom: 5px; color: #4fc3f7; }
+.subtitle { text-align: center; font-size: 0.95em; color: #90a4ae; margin-bottom: 15px; }
+
+.formulas {
+  max-width: 1400px;
+  margin: 0 auto 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.formula-box {
+  padding: 14px 18px;
+  background: #16213e;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+}
+.formula-box h3 { font-size: 0.85em; color: #4fc3f7; margin-bottom: 6px; }
+.formula-box .math {
+  font-family: 'Times New Roman', serif;
+  font-size: 1.15em;
+  color: #fff;
+  text-align: center;
+  margin: 6px 0;
+}
+.formula-box .note { font-size: 0.78em; color: #90a4ae; line-height: 1.5; }
+.formula-box .note strong { color: #b0bec5; }
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+}
+.controls {
+  background: #16213e;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+}
+.controls h3 { color: #4fc3f7; margin-bottom: 10px; font-size: 1em; }
+.control-group { margin-bottom: 14px; }
+.control-group label {
+  display: block; font-size: 0.82em; margin-bottom: 4px; color: #b0bec5;
+}
+.control-group .value { float: right; color: #4fc3f7; font-weight: bold; }
+.control-group input[type="range"] {
+  width: 100%; margin-top: 2px; accent-color: #4fc3f7;
+}
+.separator { border: none; border-top: 1px solid #0f3460; margin: 12px 0; }
+
+.corr-toggle {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.corr-toggle button {
+  flex: 1; padding: 6px 4px;
+  border: 1px solid #0f3460; background: #1a1a2e;
+  color: #90a4ae; border-radius: 6px; cursor: pointer;
+  font-size: 0.75em; transition: all 0.2s;
+}
+.corr-toggle button.active {
+  background: #0f3460; color: #4fc3f7; border-color: #4fc3f7;
+}
+
+.btn-regen {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid #0f3460; background: #0f3460;
+  color: #4fc3f7; border-radius: 6px; cursor: pointer;
+  font-size: 0.82em; font-weight: bold; transition: all 0.2s;
+  margin-bottom: 14px;
+}
+.btn-regen:hover { background: #1a3a6e; }
+
+.insight-box {
+  background: #1a1a2e;
+  border-left: 3px solid #4fc3f7;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  color: #b0bec5;
+}
+.insight-box strong { color: #e0e0e0; }
+.insight-box .val { color: #4fc3f7; font-weight: bold; }
+.insight-box .val-good { color: #66bb6a; font-weight: bold; }
+.insight-box .val-bad { color: #ff7043; font-weight: bold; }
+
+.instructions {
+  background: #0f3460;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  margin-bottom: 14px;
+  line-height: 1.5;
+  color: #b0bec5;
+}
+.instructions strong { color: #4fc3f7; }
+
+.plots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+.plot-container {
+  background: #16213e;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+  padding: 8px;
+  min-height: 300px;
+}
+
+.bottom-section {
+  max-width: 1400px;
+  margin: 20px auto 0;
+}
+.section-title { color: #4fc3f7; font-size: 1.2em; margin-bottom: 4px; }
+.section-subtitle { color: #90a4ae; font-size: 0.85em; margin-bottom: 12px; }
+.bottom-plots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.bottom-plots .plot-container { min-height: 320px; }
+</style>
+</head>
+<body>
+
+<h1>Ensemble Covariance &amp; Localization</h1>
+<p class="subtitle">Why finite ensembles produce spurious correlations &mdash; and how the Schur product fixes them</p>
+
+<div class="formulas">
+  <div class="formula-box">
+    <h3>The Sampling Problem</h3>
+    <div class="math">
+      B&#x0302;<sub>ens</sub> = <span style="font-size:0.85em">1/(N&minus;1)</span> &sum;<sub>i</sub> (x<sub>i</sub> &minus; x&#x0304;)(x<sub>i</sub> &minus; x&#x0304;)<sup>T</sup>
+    </div>
+    <div class="note">
+      With <strong>N</strong> ensemble members, the sample covariance B&#x0302;<sub>ens</sub> is a noisy estimate of the true B.
+      Finite sampling creates <strong>spurious long-range correlations</strong> &mdash; grid points that appear correlated
+      when they shouldn't be. Smaller ensemble &rarr; more noise.
+    </div>
+  </div>
+  <div class="formula-box">
+    <h3>The Localization Fix (Schur Product)</h3>
+    <div class="math">
+      B<sub>eff</sub> = <span style="color:#66bb6a"><strong>L</strong></span> &compfn; B&#x0302;<sub>ens</sub>
+    </div>
+    <div class="note">
+      <strong style="color:#66bb6a">L</strong> is a smooth, positive-definite localization matrix that tapers to zero at distance.
+      The Schur (element-wise) product zeros out spurious remote correlations while preserving nearby structure.<br>
+      <strong>Gaussian</strong>: L(d) = exp(&minus;d&sup2;/2L&sup2;) &emsp;
+      <strong>Gaspari-Cohn</strong>: compact support (exact zero beyond 2L)
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <div class="instructions">
+      <strong>Click</strong> any heatmap to select a cross-section row.
+      The bottom plots show a 1D slice comparing true, raw, and localized covariance at that point.
+    </div>
+
+    <h3>True Covariance</h3>
+    <div class="control-group">
+      <label>True length scale (L<sub>true</sub>) <span class="value" id="val-true-length">10</span></label>
+      <input type="range" id="slider-true-length" min="3" max="25" step="1" value="10" oninput="onTrueLengthChange()">
+    </div>
+
+    <hr class="separator">
+    <h3>Ensemble</h3>
+    <div class="control-group">
+      <label>Ensemble size (N<sub>ens</sub>) <span class="value" id="val-ens-size">20</span></label>
+      <input type="range" id="slider-ens-size" min="5" max="500" step="5" value="20" oninput="onEnsSizeChange()">
+    </div>
+    <button class="btn-regen" onclick="onRegenerate()">Regenerate Ensemble (new random seed)</button>
+
+    <hr class="separator">
+    <h3>Localization</h3>
+    <div class="control-group">
+      <label>Localization length (L<sub>loc</sub>) <span class="value" id="val-loc-length">15</span></label>
+      <input type="range" id="slider-loc-length" min="3" max="40" step="1" value="15" oninput="onLocChange()">
+    </div>
+    <div class="corr-toggle">
+      <button id="loc-gaussian" class="active" onclick="setLocType('gaussian')">Gaussian</button>
+      <button id="loc-gc" onclick="setLocType('gc')">Gaspari-Cohn</button>
+    </div>
+
+    <hr class="separator">
+    <h3>Cross-Section</h3>
+    <div class="control-group">
+      <label>Selected grid point <span class="value" id="val-cross-point">50</span></label>
+    </div>
+
+    <hr class="separator">
+    <h3>Error Metrics</h3>
+    <div class="insight-box" id="metrics-box"></div>
+
+    <div class="insight-box" style="margin-top: 10px;" id="insight-box">
+      <strong>Key insight:</strong> Localization trades a small bias (tapering real correlations)
+      for a large variance reduction (removing spurious noise). The net effect is always beneficial
+      when the ensemble is too small to resolve long-range correlations.
+    </div>
+  </div>
+
+  <div class="plots">
+    <div class="plot-container" id="plot-true"></div>
+    <div class="plot-container" id="plot-raw"></div>
+    <div class="plot-container" id="plot-loc"></div>
+    <div class="plot-container" id="plot-localized"></div>
+  </div>
+</div>
+
+<div class="bottom-section">
+  <h2 class="section-title">Cross-Section Comparison</h2>
+  <p class="section-subtitle">One row of each matrix &mdash; click any heatmap above to change the selected grid point</p>
+  <div class="bottom-plots">
+    <div class="plot-container" id="plot-cross-cov"></div>
+    <div class="plot-container" id="plot-cross-loc"></div>
+  </div>
+</div>
+
+<script>
+const N = 100;
+let seed = 42;
+let locType = 'gaussian';
+let crossPoint = 50;
+
+let B_true, circInfo, B_ens, L_mat, B_loc;
+
+// ─── Seedable PRNG (mulberry32) ───
+
+function mulberry32(s) {
+  return function() {
+    s |= 0; s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ─── Box-Muller for Gaussian samples ───
+
+function boxMuller(rng) {
+  const u1 = rng(), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// ─── Radix-2 FFT (in-place, complex) ───
+// inverse=true divides by n after transform
+
+function fft(re, im, inverse) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    while (j & bit) { j ^= bit; bit >>= 1; }
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const halfLen = len >> 1;
+    const angle = (inverse ? 2 : -2) * Math.PI / len;
+    const wRe = Math.cos(angle), wIm = Math.sin(angle);
+    for (let i = 0; i < n; i += len) {
+      let curRe = 1, curIm = 0;
+      for (let j = 0; j < halfLen; j++) {
+        const a = i + j, b = i + j + halfLen;
+        const tRe = curRe * re[b] - curIm * im[b];
+        const tIm = curRe * im[b] + curIm * re[b];
+        re[b] = re[a] - tRe;
+        im[b] = im[a] - tIm;
+        re[a] += tRe;
+        im[a] += tIm;
+        const tmp = curRe * wRe - curIm * wIm;
+        curIm = curRe * wIm + curIm * wRe;
+        curRe = tmp;
+      }
+    }
+  }
+  if (inverse) {
+    for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+  }
+}
+
+// ─── Circulant embedding of a Toeplitz covariance ───
+// B_true is Toeplitz with first row r. Embed in a circulant of size M >= 2n,
+// FFT to get eigenvalues, store sqrt(eigenvalues) for fast sampling.
+
+function buildCirculantEmbedding(firstRow) {
+  const n = firstRow.length;
+  let M = 1;
+  while (M < 2 * n) M <<= 1;
+
+  const cRe = new Float64Array(M);
+  const cIm = new Float64Array(M);
+  cRe[0] = firstRow[0];
+  for (let k = 1; k < n; k++) {
+    cRe[k] = firstRow[k];
+    cRe[M - k] = firstRow[k];
+  }
+
+  fft(cRe, cIm, false);
+
+  const sqrtLambda = new Float64Array(M);
+  for (let k = 0; k < M; k++) {
+    sqrtLambda[k] = Math.sqrt(Math.max(0, cRe[k]));
+  }
+  return {M, sqrtLambda};
+}
+
+// ─── Generate ensemble samples via circulant embedding + FFT ───
+// Samples from N(0, B_true) without Cholesky ordering artifacts.
+// Cost: O(M log M) per sample.
+
+function generateSamples(ci, nEns) {
+  const {M, sqrtLambda} = ci;
+  const half = M >> 1;
+  const sqrtM = Math.sqrt(M);
+  const rng = mulberry32(seed);
+  const samples = [];
+
+  for (let s = 0; s < nEns; s++) {
+    const zRe = new Float64Array(M);
+    const zIm = new Float64Array(M);
+
+    // k=0 and k=M/2: real-valued (no imaginary part)
+    zRe[0] = boxMuller(rng) * sqrtLambda[0];
+    zRe[half] = boxMuller(rng) * sqrtLambda[half];
+
+    // k=1..half-1: conjugate pairs to guarantee real output
+    for (let k = 1; k < half; k++) {
+      const a = boxMuller(rng) / Math.SQRT2;
+      const b = boxMuller(rng) / Math.SQRT2;
+      zRe[k]     = a * sqrtLambda[k];
+      zIm[k]     = b * sqrtLambda[k];
+      zRe[M - k] = a * sqrtLambda[k];
+      zIm[M - k] = -b * sqrtLambda[k];
+    }
+
+    fft(zRe, zIm, true);
+
+    const x = new Float64Array(N);
+    for (let i = 0; i < N; i++) x[i] = zRe[i] * sqrtM;
+    samples.push(x);
+  }
+  return samples;
+}
+
+// ─── Sample covariance matrix ───
+
+function sampleCovariance(samples) {
+  const m = samples.length;
+  const n = samples[0].length;
+  const mean = new Float64Array(n);
+  for (let s = 0; s < m; s++) {
+    for (let i = 0; i < n; i++) mean[i] += samples[s][i] / m;
+  }
+  const cov = Array.from({length: n}, () => new Float64Array(n));
+  for (let s = 0; s < m; s++) {
+    for (let i = 0; i < n; i++) {
+      const di = samples[s][i] - mean[i];
+      for (let j = 0; j <= i; j++) {
+        cov[i][j] += di * (samples[s][j] - mean[j]);
+      }
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      cov[i][j] /= (m - 1);
+      cov[j][i] = cov[i][j];
+    }
+  }
+  return cov;
+}
+
+// ─── Gaspari-Cohn function ───
+
+function gaspariCohn(z) {
+  if (z >= 2) return 0;
+  if (z <= 1) return 1 - (5/3)*z*z + (5/8)*z*z*z + 0.5*z*z*z*z - 0.25*z*z*z*z*z;
+  return 4 - 5*z + (5/3)*z*z + (5/8)*z*z*z - 0.5*z*z*z*z + (1/12)*z*z*z*z*z - 2/(3*z);
+}
+
+// ─── Compute true covariance ───
+
+function computeTrueCovariance() {
+  const trueL = parseInt(document.getElementById('slider-true-length').value);
+  B_true = Array.from({length: N}, () => new Float64Array(N));
+  const firstRow = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    firstRow[i] = Math.exp(-i * i / (2 * trueL * trueL));
+    for (let j = 0; j < N; j++) {
+      const d = Math.abs(i - j);
+      B_true[i][j] = Math.exp(-d * d / (2 * trueL * trueL));
+    }
+  }
+  circInfo = buildCirculantEmbedding(firstRow);
+}
+
+// ─── Generate ensemble covariance ───
+
+function computeEnsembleCovariance() {
+  const nEns = parseInt(document.getElementById('slider-ens-size').value);
+  const samples = generateSamples(circInfo, nEns);
+  B_ens = sampleCovariance(samples);
+}
+
+// ─── Compute localization matrix ───
+
+function computeLocalization() {
+  const locL = parseInt(document.getElementById('slider-loc-length').value);
+  L_mat = Array.from({length: N}, () => new Float64Array(N));
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const d = Math.abs(i - j);
+      if (locType === 'gaussian') {
+        L_mat[i][j] = Math.exp(-d * d / (2 * locL * locL));
+      } else {
+        L_mat[i][j] = gaspariCohn(d / locL);
+      }
+    }
+  }
+}
+
+// ─── Apply Schur product ───
+
+function applyLocalization() {
+  B_loc = Array.from({length: N}, () => new Float64Array(N));
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      B_loc[i][j] = B_ens[i][j] * L_mat[i][j];
+    }
+  }
+}
+
+// ─── Frobenius norm ───
+
+function frobeniusNorm(A) {
+  let sum = 0;
+  for (let i = 0; i < A.length; i++) {
+    for (let j = 0; j < A[i].length; j++) {
+      sum += A[i][j] * A[i][j];
+    }
+  }
+  return Math.sqrt(sum);
+}
+
+function frobeniusDiff(A, B) {
+  let sum = 0;
+  for (let i = 0; i < A.length; i++) {
+    for (let j = 0; j < A[i].length; j++) {
+      const d = A[i][j] - B[i][j];
+      sum += d * d;
+    }
+  }
+  return Math.sqrt(sum);
+}
+
+// ─── Event handlers ───
+
+function onTrueLengthChange() {
+  document.getElementById('val-true-length').textContent = document.getElementById('slider-true-length').value;
+  computeTrueCovariance();
+  computeEnsembleCovariance();
+  applyLocalization();
+  renderAll();
+}
+
+function onEnsSizeChange() {
+  document.getElementById('val-ens-size').textContent = document.getElementById('slider-ens-size').value;
+  computeEnsembleCovariance();
+  applyLocalization();
+  renderAll();
+}
+
+function onLocChange() {
+  document.getElementById('val-loc-length').textContent = document.getElementById('slider-loc-length').value;
+  computeLocalization();
+  applyLocalization();
+  renderAll();
+}
+
+function setLocType(t) {
+  locType = t;
+  document.getElementById('loc-gaussian').className = t === 'gaussian' ? 'active' : '';
+  document.getElementById('loc-gc').className = t === 'gc' ? 'active' : '';
+  computeLocalization();
+  applyLocalization();
+  renderAll();
+}
+
+function onRegenerate() {
+  seed = Math.floor(Math.random() * 100000);
+  computeEnsembleCovariance();
+  applyLocalization();
+  renderAll();
+}
+
+function handleHeatmapClick(data) {
+  if (!data || !data.points || data.points.length === 0) return;
+  const pt = data.points[0];
+  const row = Math.round(pt.y);
+  if (row < 0 || row >= N) return;
+  crossPoint = row;
+  document.getElementById('val-cross-point').textContent = crossPoint;
+  renderCrossSections();
+}
+
+// ─── Rendering ───
+
+const basePlotLayout = {
+  paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+  font: {color: '#e0e0e0', size: 11},
+  margin: {t: 40, b: 40, l: 45, r: 20},
+  xaxis: {showgrid: false, title: 'Grid point'},
+  yaxis: {showgrid: false, title: 'Grid point', autorange: 'reversed'},
+};
+
+function renderAll() {
+  renderHeatmaps();
+  renderCrossSections();
+  renderMetrics();
+}
+
+function renderHeatmaps() {
+  const vmax = Math.max(...B_ens.map(r => Math.max(...r.map(Math.abs)))) * 0.8;
+  const vmax_loc = Math.max(...B_loc.map(r => Math.max(...r.map(Math.abs)))) * 0.8;
+
+  // True B
+  Plotly.react('plot-true', [{
+    z: B_true, type: 'heatmap', colorscale: 'RdBu', reversescale: true,
+    zmin: -1, zmax: 1, colorbar: {title: '', len: 0.9, thickness: 12}
+  }], {
+    ...basePlotLayout,
+    title: {text: 'True Covariance B (Gaussian)', font: {size: 13, color: '#ab47bc'}}
+  }, {responsive: true});
+
+  // Raw ensemble B
+  Plotly.react('plot-raw', [{
+    z: B_ens, type: 'heatmap', colorscale: 'RdBu', reversescale: true,
+    zmin: -vmax, zmax: vmax, colorbar: {title: '', len: 0.9, thickness: 12}
+  }], {
+    ...basePlotLayout,
+    title: {text: 'Raw Ensemble Covariance B&#x0302;<sub>ens</sub> (noisy)', font: {size: 13, color: '#ff7043'}}
+  }, {responsive: true});
+
+  // Localization matrix
+  Plotly.react('plot-loc', [{
+    z: L_mat, type: 'heatmap', colorscale: 'Viridis',
+    zmin: 0, zmax: 1, colorbar: {title: '', len: 0.9, thickness: 12}
+  }], {
+    ...basePlotLayout,
+    title: {text: `Localization L (${locType === 'gaussian' ? 'Gaussian' : 'Gaspari-Cohn'})`, font: {size: 13, color: '#66bb6a'}}
+  }, {responsive: true});
+
+  // Localized B
+  Plotly.react('plot-localized', [{
+    z: B_loc, type: 'heatmap', colorscale: 'RdBu', reversescale: true,
+    zmin: -vmax_loc, zmax: vmax_loc, colorbar: {title: '', len: 0.9, thickness: 12}
+  }], {
+    ...basePlotLayout,
+    title: {text: 'Localized B<sub>eff</sub> = L ∘ B&#x0302;<sub>ens</sub>', font: {size: 13, color: '#4fc3f7'}}
+  }, {responsive: true});
+
+  // Attach click handlers
+  ['plot-true', 'plot-raw', 'plot-loc', 'plot-localized'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.removeAllListeners && el.removeAllListeners('plotly_click');
+      el.on('plotly_click', handleHeatmapClick);
+    }
+  });
+}
+
+function renderCrossSections() {
+  const p = crossPoint;
+  const xs = Array.from({length: N}, (_, i) => i);
+  const trueRow = xs.map(i => B_true[p][i]);
+  const rawRow = xs.map(i => B_ens[p][i]);
+  const locRow = xs.map(i => L_mat[p][i]);
+  const localizedRow = xs.map(i => B_loc[p][i]);
+
+  const crossLayout = {
+    paper_bgcolor: '#16213e', plot_bgcolor: '#16213e',
+    font: {color: '#e0e0e0', size: 11},
+    margin: {t: 40, b: 50, l: 55, r: 20},
+    xaxis: {title: 'Grid point', showgrid: true, gridcolor: '#263238', dtick: 10},
+    yaxis: {showgrid: true, gridcolor: '#263238'},
+    legend: {x: 0.02, y: 0.98, bgcolor: 'rgba(22,33,62,0.85)', font: {size: 11}},
+    showlegend: true,
+  };
+
+  // Left: covariance comparison
+  Plotly.react('plot-cross-cov', [
+    {x: xs, y: trueRow, mode: 'lines', name: 'True B',
+     line: {color: '#ab47bc', width: 3}},
+    {x: xs, y: rawRow, mode: 'lines', name: 'Raw ensemble',
+     line: {color: '#ff7043', width: 2, dash: 'dot'}},
+    {x: xs, y: localizedRow, mode: 'lines', name: 'Localized',
+     line: {color: '#4fc3f7', width: 2.5}},
+    {x: [p], y: [B_true[p][p]], mode: 'markers',
+     marker: {size: 10, color: 'white', symbol: 'diamond'}, showlegend: false}
+  ], {
+    ...crossLayout,
+    title: {text: `Covariance row at grid point ${p}`, font: {size: 13, color: '#4fc3f7'}},
+    yaxis: {...crossLayout.yaxis, title: 'Covariance'},
+    shapes: [{
+      type: 'line', x0: p, x1: p, y0: -0.3, y1: 1.1,
+      line: {color: '#546e7a', width: 1, dash: 'dot'}
+    }]
+  }, {responsive: true});
+
+  // Right: localization functions comparison (both Gaussian and GC)
+  const locL = parseInt(document.getElementById('slider-loc-length').value);
+  const gaussRow = xs.map(i => Math.exp(-Math.pow(Math.abs(i - p), 2) / (2 * locL * locL)));
+  const gcRow = xs.map(i => gaspariCohn(Math.abs(i - p) / locL));
+
+  Plotly.react('plot-cross-loc', [
+    {x: xs, y: rawRow, mode: 'lines', name: 'Raw ensemble cov',
+     line: {color: '#ff7043', width: 1.5, dash: 'dot'}, opacity: 0.5},
+    {x: xs, y: gaussRow, mode: 'lines', name: 'Gaussian',
+     line: {color: '#42a5f5', width: 2.5, dash: locType === 'gaussian' ? 'solid' : 'dash'}},
+    {x: xs, y: gcRow, mode: 'lines', name: 'Gaspari-Cohn',
+     line: {color: '#ef5350', width: 2.5, dash: locType === 'gc' ? 'solid' : 'dash'}},
+    {x: [p], y: [1], mode: 'markers',
+     marker: {size: 10, color: 'white', symbol: 'diamond'}, showlegend: false}
+  ], {
+    ...crossLayout,
+    title: {text: `Localization functions at grid point ${p}`, font: {size: 13, color: '#66bb6a'}},
+    yaxis: {...crossLayout.yaxis, title: 'Weight', range: [-0.15, 1.1]},
+    shapes: [{
+      type: 'line', x0: p, x1: p, y0: -0.15, y1: 1.1,
+      line: {color: '#546e7a', width: 1, dash: 'dot'}
+    }],
+    annotations: locType === 'gc' ? [{
+      x: Math.min(p + 2 * locL, N - 1), y: 0,
+      text: 'exact zero', showarrow: true, arrowhead: 2, arrowcolor: '#ef5350',
+      ax: 0, ay: -30, font: {color: '#ef5350', size: 10}
+    }] : []
+  }, {responsive: true});
+}
+
+function renderMetrics() {
+  const normTrue = frobeniusNorm(B_true);
+  const errRaw = frobeniusDiff(B_ens, B_true) / normTrue;
+  const errLoc = frobeniusDiff(B_loc, B_true) / normTrue;
+  const improvement = ((errRaw - errLoc) / errRaw * 100);
+  const nEns = parseInt(document.getElementById('slider-ens-size').value);
+
+  document.getElementById('metrics-box').innerHTML =
+    `<strong>Relative error (Frobenius norm):</strong><br>` +
+    `Raw ensemble: <span class="val-bad">${(errRaw * 100).toFixed(1)}%</span><br>` +
+    `After localization: <span class="val-good">${(errLoc * 100).toFixed(1)}%</span><br>` +
+    `Improvement: <span class="val">${improvement.toFixed(1)}%</span>`;
+
+  let insight = '';
+  if (nEns < 20) {
+    insight = `<strong>Very small ensemble (N=${nEns}):</strong> Heavy sampling noise dominates. ` +
+      `Aggressive localization (short L<sub>loc</sub>) is essential &mdash; the raw ensemble is barely usable.`;
+  } else if (nEns < 80) {
+    insight = `<strong>Moderate ensemble (N=${nEns}):</strong> Clear spurious features visible in the raw covariance. ` +
+      `Localization provides significant improvement. Try increasing N to see the noise decrease.`;
+  } else if (nEns < 200) {
+    insight = `<strong>Large ensemble (N=${nEns}):</strong> Sampling noise is reduced but still present at distance. ` +
+      `Localization still helps, but you can afford a longer L<sub>loc</sub> (less aggressive tapering).`;
+  } else {
+    insight = `<strong>Very large ensemble (N=${nEns}):</strong> The raw estimate approaches the truth. ` +
+      `Localization adds little value &mdash; the ensemble is large enough to resolve the true structure. ` +
+      `In practice, ensembles this large are too expensive to run.`;
+  }
+  document.getElementById('insight-box').innerHTML = insight;
+}
+
+// ─── Initialize ───
+
+computeTrueCovariance();
+computeEnsembleCovariance();
+computeLocalization();
+applyLocalization();
+
+// Defer rendering until Plotly is ready
+setTimeout(() => renderAll(), 100);
+</script>
+</body>
+</html>

@@ -235,8 +235,7 @@ h1 {
       <strong style="color:#aed581">&#931;</strong> = std dev &nbsp;
       <strong style="color:#4dd0e1">K</strong> = balance<br>
       <strong style="color:#ffb74d">V</strong> = variable change (&psi;,&chi; &rarr; u,v) &nbsp;
-      <strong style="color:#ab47bc">T</strong> = interpolation<br>
-      <em>Ensemble B: &ensp; B<sub>eff</sub> = <strong style="color:#ef5350">L</strong> &compfn; B<sub>ens</sub> &ensp; (Schur product with localization)</em>
+      <strong style="color:#ab47bc">T</strong> = interpolation
     </div>
   </div>
 </div>
@@ -252,7 +251,6 @@ h1 {
     <div class="mode-toggle">
       <button id="mode-single" class="active" onclick="setMode('single')">Single Obs</button>
       <button id="mode-dual" onclick="setMode('dual')">Two Obs</button>
-      <button id="mode-ensemble" onclick="setMode('ensemble')">Ensemble</button>
     </div>
 
     <h3>Correlation Function</h3>
@@ -282,11 +280,6 @@ h1 {
     <div class="control-group" id="rho-group">
       <label>Cross-correlation T&harr;P (&rho;) <span class="value" id="val-rho">0.5</span></label>
       <input type="range" id="slider-rho" min="-0.9" max="0.9" step="0.05" value="0.5" oninput="update()">
-    </div>
-
-    <div class="control-group" id="ens-size-group" style="display:none;">
-      <label>Ensemble size (N<sub>ens</sub>) <span class="value" id="val-ens-size">30</span></label>
-      <input type="range" id="slider-ens-size" min="5" max="200" step="5" value="30" oninput="regenerateEnsemble()">
     </div>
 
     <hr class="separator">
@@ -345,18 +338,11 @@ const N = 20;
 let mode = 'single';
 let corrType = 'gaussian';
 let obs = [{x: 10, y: 10, innovation: 2.0}];
-let ensembleCorr = null; // cached synthetic ensemble correlation
-
 function setMode(m) {
   mode = m;
   document.getElementById('mode-single').className = m === 'single' ? 'active' : '';
   document.getElementById('mode-dual').className = m === 'dual' ? 'active' : '';
-  document.getElementById('mode-ensemble').className = m === 'ensemble' ? 'active' : '';
   document.getElementById('innov2-group').style.display = m === 'dual' ? 'block' : 'none';
-  document.getElementById('ens-size-group').style.display = m === 'ensemble' ? 'block' : 'none';
-  document.getElementById('sigbp-group').style.display = m === 'ensemble' ? 'none' : 'block';
-  document.getElementById('rho-group').style.display = m === 'ensemble' ? 'none' : 'block';
-  document.getElementById('innov1-group').style.display = m === 'ensemble' ? 'none' : 'block';
 
   if (m === 'single') {
     obs = [obs[0]];
@@ -366,10 +352,6 @@ function setMode(m) {
     if (obs.length < 2) obs.push({x: 15, y: 5, innovation: parseFloat(document.getElementById('slider-innov2').value)});
     document.getElementById('instructions-text').innerHTML =
       '<strong>Click</strong> to reposition the 2nd observation. Watch how length scale controls whether the two obs interact or stay independent.';
-  } else {
-    if (!ensembleCorr) regenerateEnsemble();
-    document.getElementById('instructions-text').innerHTML =
-      'The <strong>ensemble</strong> provides raw (noisy) correlations. <strong>Localization</strong> (L slider) suppresses spurious long-range noise via Schur product: B<sub>eff</sub> = L ∘ B<sub>ens</sub>';
   }
   update();
 }
@@ -401,84 +383,6 @@ function distance(x1, y1, x2, y2) {
   return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 }
 
-// Generate synthetic ensemble correlation field (noisy)
-function generateEnsembleCorrelation(nEns, trueL) {
-  // Simulate what an N-member ensemble gives you:
-  // True correlation has length scale ~trueL, but sampling noise adds spurious features
-  const cx = obs[0].x, cy = obs[0].y;
-
-  // Generate ensemble members as correlated random fields
-  // Then compute sample correlation from obs point
-  let members = [];
-  for (let m = 0; m < nEns; m++) {
-    let field = Array.from({length: N}, () => new Float64Array(N));
-    // Generate correlated noise: sum of random harmonics
-    const nModes = 8;
-    for (let k = 0; k < nModes; k++) {
-      const kx = (Math.random() - 0.5) * 2 * Math.PI / trueL;
-      const ky = (Math.random() - 0.5) * 2 * Math.PI / trueL;
-      const phase = Math.random() * 2 * Math.PI;
-      const amp = Math.random();
-      for (let j = 0; j < N; j++) {
-        for (let i = 0; i < N; i++) {
-          field[j][i] += amp * Math.cos(kx * i + ky * j + phase);
-        }
-      }
-    }
-    // Add uncorrelated noise
-    for (let j = 0; j < N; j++) {
-      for (let i = 0; i < N; i++) {
-        field[j][i] += (Math.random() - 0.5) * 0.5;
-      }
-    }
-    members.push(field);
-  }
-
-  // Compute ensemble mean
-  let mean = Array.from({length: N}, () => new Float64Array(N));
-  for (let m = 0; m < nEns; m++) {
-    for (let j = 0; j < N; j++) {
-      for (let i = 0; i < N; i++) {
-        mean[j][i] += members[m][j][i] / nEns;
-      }
-    }
-  }
-
-  // Compute sample correlation with obs point
-  let corrMap = Array.from({length: N}, () => new Float64Array(N));
-  let varObs = 0;
-  let varField = Array.from({length: N}, () => new Float64Array(N));
-  let cov = Array.from({length: N}, () => new Float64Array(N));
-
-  for (let m = 0; m < nEns; m++) {
-    const obsVal = members[m][cy][cx] - mean[cy][cx];
-    varObs += obsVal * obsVal;
-    for (let j = 0; j < N; j++) {
-      for (let i = 0; i < N; i++) {
-        const fieldVal = members[m][j][i] - mean[j][i];
-        cov[j][i] += obsVal * fieldVal;
-        varField[j][i] += fieldVal * fieldVal;
-      }
-    }
-  }
-
-  for (let j = 0; j < N; j++) {
-    for (let i = 0; i < N; i++) {
-      const denom = Math.sqrt(varObs * varField[j][i]);
-      corrMap[j][i] = denom > 0 ? cov[j][i] / denom : 0;
-    }
-  }
-
-  return corrMap;
-}
-
-function regenerateEnsemble() {
-  const nEns = parseInt(document.getElementById('slider-ens-size').value);
-  document.getElementById('val-ens-size').textContent = nEns;
-  const trueL = 3.5; // true underlying correlation length
-  ensembleCorr = generateEnsembleCorrelation(nEns, trueL);
-  update();
-}
 
 function computeIncrements() {
   const L = parseFloat(document.getElementById('slider-length').value);
@@ -563,11 +467,7 @@ function update() {
     yaxis: {showgrid: false, dtick: 5, scaleanchor: 'x', title: ''},
   };
 
-  if (mode === 'ensemble') {
-    updateEnsembleMode(L, sigbT, sigo, plotLayout);
-  } else {
-    updateParametricMode(L, sigbT, sigbP, rho, sigo, plotLayout);
-  }
+  updateParametricMode(L, sigbT, sigbP, rho, sigo, plotLayout);
 
   updateBMatrixPlots(L, sigbT, sigbP, rho, sigo);
 }
@@ -650,98 +550,6 @@ function updateParametricMode(L, sigbT, sigbP, rho, sigo, plotLayout) {
   }, {responsive: true});
 }
 
-function updateEnsembleMode(L, sigbT, sigo, plotLayout) {
-  document.getElementById('obs-info').innerHTML = `Obs at (${obs[0].x}, ${obs[0].y})`;
-  document.getElementById('mode-insight').innerHTML =
-    `<strong>Ensemble B:</strong> Raw sample correlations are noisy (spurious features at distance). ` +
-    `The localization function (L slider) is applied as a Schur product to taper these artifacts. ` +
-    `<em>Larger ensemble &rarr; less noise &rarr; less aggressive localization needed.</em>`;
-
-  if (!ensembleCorr) regenerateEnsemble();
-
-  const cx = obs[0].x, cy = obs[0].y;
-
-  // Compute localization field
-  let locField = Array.from({length: N}, () => new Float64Array(N));
-  for (let j = 0; j < N; j++) {
-    for (let i = 0; i < N; i++) {
-      locField[j][i] = correlation(distance(i, j, cx, cy), L);
-    }
-  }
-
-  // Localized correlation = Schur product
-  let localizedCorr = Array.from({length: N}, () => new Float64Array(N));
-  for (let j = 0; j < N; j++) {
-    for (let i = 0; i < N; i++) {
-      localizedCorr[j][i] = ensembleCorr[j][i] * locField[j][i];
-    }
-  }
-
-  // Compute increment from localized ensemble B
-  let incEns = Array.from({length: N}, () => new Float64Array(N));
-  const denom = sigbT * sigbT * localizedCorr[cy][cx] + sigo * sigo;
-  for (let j = 0; j < N; j++) {
-    for (let i = 0; i < N; i++) {
-      incEns[j][i] = (sigbT * sigbT * localizedCorr[j][i] / denom) * 2.0;
-    }
-  }
-
-  const obsMarker = [{
-    x: [cx], y: [cy], mode: 'markers',
-    marker: {size: 14, color: 'white', symbol: 'x', line: {width: 2}},
-    showlegend: false
-  }];
-
-  // Panel 1: Raw ensemble correlation
-  Plotly.react('plot-panel1', [
-    {z: ensembleCorr, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
-     zmin: -1, zmax: 1, colorbar: {title: 'r', len: 0.9}},
-    ...obsMarker
-  ], {...plotLayout, title: {text: 'Raw Ensemble Correlation (noisy)', font: {size: 13, color: '#ff7043'}}},
-  {responsive: true});
-
-  // Panel 2: Localization function
-  Plotly.react('plot-panel2', [
-    {z: locField, type: 'heatmap', colorscale: 'Viridis', zmin: 0, zmax: 1,
-     colorbar: {title: 'L', len: 0.9}},
-    ...obsMarker
-  ], {...plotLayout, title: {text: `Localization Function (L=${L.toFixed(1)})`, font: {size: 13, color: '#66bb6a'}}},
-  {responsive: true});
-
-  // Panel 3: Analysis increment (responds to sigma_b, sigma_o)
-  const incMax = Math.max(...incEns.flat().map(Math.abs)) || 1;
-  Plotly.react('plot-panel3', [
-    {z: incEns, type: 'heatmap', colorscale: 'RdBu', reversescale: false,
-     zmin: -incMax, zmax: incMax, colorbar: {title: 'δx', len: 0.9}},
-    ...obsMarker
-  ], {...plotLayout, title: {text: `Analysis Increment (σ_b=${sigbT.toFixed(1)}, σ_o=${sigo.toFixed(1)})`, font: {size: 13, color: '#ab47bc'}}},
-  {responsive: true});
-
-  // Panel 4: Cross-section comparison
-  const row = cy;
-  let rawSlice = [], locSlice = [], localizedSlice = [], incSlice = [], xs = [];
-  for (let i = 0; i < N; i++) {
-    xs.push(i);
-    rawSlice.push(ensembleCorr[row][i]);
-    locSlice.push(locField[row][i]);
-    localizedSlice.push(localizedCorr[row][i]);
-    incSlice.push(incEns[row][i]);
-  }
-
-  Plotly.react('plot-panel4', [
-    {x: xs, y: rawSlice, mode: 'lines', name: 'Raw ensemble', line: {color: '#ff7043', width: 2, dash: 'dot'}},
-    {x: xs, y: locSlice, mode: 'lines', name: 'Localization', line: {color: '#66bb6a', width: 2, dash: 'dash'}},
-    {x: xs, y: localizedSlice, mode: 'lines', name: 'Localized corr', line: {color: '#90a4ae', width: 2}},
-    {x: xs, y: incSlice, mode: 'lines', name: 'Increment', line: {color: '#ab47bc', width: 3}},
-    {x: [cx], y: [incEns[row][cx]], mode: 'markers', marker: {size: 10, color: 'white', symbol: 'diamond'}, showlegend: false}
-  ], {
-    ...plotLayout,
-    title: {text: `Cross-section at y=${row}`, font: {size: 13, color: '#4fc3f7'}},
-    xaxis: {showgrid: true, gridcolor: '#263238', title: 'x', dtick: 5},
-    yaxis: {showgrid: true, gridcolor: '#263238', title: 'Value'},
-    legend: {x: 0.02, y: 0.95, bgcolor: 'rgba(22,33,62,0.8)'}, showlegend: true
-  }, {responsive: true});
-}
 
 function updateBMatrixPlots(L, sigbT, sigbP, rho, sigo) {
   const obsCol = obs[0].x;
@@ -815,9 +623,8 @@ function handlePlotClick(data) {
   const gx = Math.round(pt.x), gy = Math.round(pt.y);
   if (gx < 0 || gx >= N || gy < 0 || gy >= N) return;
 
-  if (mode === 'single' || mode === 'ensemble') {
+  if (mode === 'single') {
     obs = [{x: gx, y: gy, innovation: parseFloat(document.getElementById('slider-innov1').value)}];
-    if (mode === 'ensemble') { ensembleCorr = null; regenerateEnsemble(); return; }
   } else {
     const innov2 = parseFloat(document.getElementById('slider-innov2').value);
     if (obs.length < 2) obs.push({x: gx, y: gy, innovation: innov2});
