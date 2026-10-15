@@ -1,0 +1,338 @@
+/* Shared theme for the site pages (not the interactive demos, which carry their own styles).
+   Earth / landscape palette: lichen, forest, slate-blue mountains, near-black soil. */
+
+:root {
+  --bg: #eceee7;
+  --surface: #f8f9f5;
+  --surface-2: #e0e6de;
+  --ink: #121815;
+  --muted: #4c5752;
+  --border: #d1d9cf;
+  --accent: #2b6650;        /* deep forest teal */
+  --accent-hover: #1a4637;
+  --forest: #2c4636;
+  --sage: #7a967f;
+  --ochre: #5f8496;         /* slate blue */
+  --sky-top: #9cb9c8;
+  --sky-bottom: #d8e3e2;
+  --ridge-far: #6f8d9c;
+  --ridge-mid: #34574a;
+  --shadow: 0 1px 2px rgba(10, 25, 20, .07), 0 6px 18px rgba(10, 25, 20, .08);
+  --radius: 14px;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-head: "Fraunces", Georgia, "Times New Roman", serif;
+  color-scheme: light dark;
+}
+
+/* Dark palette: follows the system setting unless the toggle (js/theme.js) has set
+   data-theme on <html>. Keep the two dark blocks below in sync. */
+:root[data-theme="light"] { color-scheme: light; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0c100f;
+    --surface: #151b19;
+    --surface-2: #1e2623;
+    --ink: #e4ebe6;
+    --muted: #97a69e;
+    --border: #25302b;
+    --accent: #7dbf9f;
+    --accent-hover: #a2d5bc;
+    --forest: #9bc2a7;
+    --sage: #5d7b67;
+    --ochre: #7fa6b8;
+    --sky-top: #0a1317;
+    --sky-bottom: #132229;
+    --ridge-far: #233e4a;
+    --ridge-mid: #1d3a2c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 6px 18px rgba(0, 0, 0, .35);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c100f;
+  --surface: #151b19;
+  --surface-2: #1e2623;
+  --ink: #e4ebe6;
+  --muted: #97a69e;
+  --border: #25302b;
+  --accent: #7dbf9f;
+  --accent-hover: #a2d5bc;
+  --forest: #9bc2a7;
+  --sage: #5d7b67;
+  --ochre: #7fa6b8;
+  --sky-top: #0a1317;
+  --sky-bottom: #132229;
+  --ridge-far: #233e4a;
+  --ridge-mid: #1d3a2c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 6px 18px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--accent-hover); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-head);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+
+img { max-width: 100%; height: auto; }
+
+/* ── Header with layered ridge lines ─────────────────────────── */
+
+.site-header {
+  position: relative;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+  padding: 22px 16px 0;
+}
+
+.site-header .bar {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.site-name {
+  font-family: var(--font-head);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+.site-name:hover { color: var(--ink); }
+
+.site-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.site-nav a {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: .92rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  transition: background-color .15s ease;
+}
+.site-nav a:hover { background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--ink); }
+.site-nav a[aria-current="page"] { background: var(--surface); box-shadow: var(--shadow); }
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.theme-toggle:hover { background: var(--surface); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle:empty { display: none; }   /* no JS → no button */
+.theme-toggle svg { width: 17px; height: 17px; }
+
+.ridges { display: block; width: 100%; height: 72px; margin-top: 8px; }
+.ridges .far { fill: var(--ridge-far); }
+.ridges .mid { fill: var(--ridge-mid); }
+.ridges .near { fill: var(--bg); }
+
+/* ── Page frame ──────────────────────────────────────────────── */
+
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px 16px 48px;
+}
+
+.page-head { text-align: center; margin: 4px 0 20px; }
+.page-head .eyebrow {
+  display: inline-block;
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+.page-head .eyebrow:hover { color: var(--accent); }
+.page-head h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); margin: 0; }
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .85rem;
+  text-align: center;
+  padding: 22px 16px 32px;
+}
+
+/* ── Existing table layouts, restyled as cards ───────────────── */
+
+center { display: block; }
+
+.page table {
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  margin: 0 auto;
+  width: min(100%, 820px);
+  text-align: left;
+}
+
+.page td {
+  width: auto;                 /* override legacy width= attributes */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 22px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.page td h2 { font-size: 1.2rem; margin: .2em 0 .5em; }
+.page td h3 { font-size: 1.02rem; margin: .2em 0 .4em; }
+.page td p { margin: .5em 0; }
+
+/* m547-style spacer rows: the border spacing already separates cards */
+.page td[bgcolor="white"] { display: none; }
+
+/* Nested tables (e.g. office hours) are plain data tables, not cards */
+.page table table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100% !important;
+  max-width: 520px;
+  margin: 12px auto;
+  font-size: .92rem;
+}
+.page table table caption { font-weight: 600; color: var(--muted); padding-bottom: 6px; }
+.page table table th,
+.page table table td {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 6px 10px;
+  text-align: left;
+}
+.page table table th { color: var(--muted); font-weight: 600; }
+
+/* Publications list */
+.page ol { padding-left: 1.4em; margin: 0; }
+.page ol > br { display: none; }
+.page ol li { margin: 0 0 1em; padding-left: .3em; }
+.page ol li::marker { color: var(--sage); font-weight: 600; }
+.page a[href^="Publications/"] {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 9px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  line-height: 1.7;
+  text-decoration: none;
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: 999px;
+}
+.page a[href^="Publications/"]:hover { background: var(--accent-hover); color: var(--surface); }
+
+/* ── Card grids (home links, teaching courses) ───────────────── */
+
+.page table.grid,
+.page table.grid > tbody,
+.page table.grid > tbody > tr {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+.page table.grid { width: 100%; margin: 16px 0; border-spacing: 0; }
+.page table.grid > tbody > tr { width: 100%; }
+.page table.grid > tbody > tr > td {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 170px;
+  max-width: 220px;
+  text-align: center;
+  padding: 16px;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.page table.grid > tbody > tr > td:hover {
+  transform: translateY(-3px);
+  border-color: var(--sage);
+}
+.page table.grid h2 { font-size: 1.1rem; margin: .1em 0 .6em; }
+.page table.grid p { color: var(--muted); font-size: .88rem; margin: .6em 0 0; }
+.page table.grid a { text-decoration: none; }
+.page table.grid img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* Course cards on the teaching page */
+.page table.courses > tbody > tr > td { max-width: 230px; }
+.page table.courses .term {
+  display: inline-block;
+  margin: 3px 2px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: .88rem;
+}
+.page table.courses a.term:hover { background: var(--accent); color: var(--surface); }
+.page table.courses .terms { margin: auto 0 0; }
+
+/* ── Home hero ───────────────────────────────────────────────── */
+
+.page table.hero > tbody > tr > td.portrait {
+  flex: 0 1 260px;
+  max-width: 280px;
+  text-align: center;
+}
+.page table.hero > tbody > tr > td.bio {
+  flex: 1 1 420px;
+  max-width: 620px;
+  text-align: left;
+  font-size: 1.02rem;
+}
+.page table.hero > tbody > tr > td:hover { transform: none; border-color: var(--border); }
+.page table.hero td.portrait img {
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-position: center;
+  border-radius: 12px;
+}
+.page table.hero h4 { margin: .2em 0 .7em; font-size: 1.1rem; }
+.page table.hero .role { color: var(--muted); font-size: .88rem; margin-top: .6em; }
